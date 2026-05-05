@@ -3,28 +3,27 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Power BI (standalone)</title>
+    <title>Power BI — Genesis V7 Live</title>
     <link rel="stylesheet" href="/css/app.css" />
     <style>
       .standalone-wrap {
-        max-width: 960px;
+        max-width: 1180px;
         margin: 0 auto;
         padding: 16px;
-      }
-      .standalone-wrap iframe {
-        width: 100%;
-        min-height: 70vh;
-        border: 1px solid var(--border);
-        border-radius: 8px;
       }
     </style>
   </head>
   <body style="background: var(--linen)">
     <div class="standalone-wrap">
       <p><a href="/">← Back to platform</a></p>
-      <h1>Power BI (standalone)</h1>
-      <p class="muted">Same embed as Deals Tracker. Edit <code>report-embed.html</code> to set the iframe URL.</p>
-      <iframe title="Power BI report" src="/report-embed.html"></iframe>
+      <h1>Genesis V7 Live</h1>
+      <div class="pbi-embed-wrap pbi-embed-wrap--chart">
+        <iframe
+          title="GEnesis V7 Live"
+          src="https://app.powerbi.com/reportEmbed?reportId=2c6f7901-7525-4049-8951-4d7e342f4b96&amp;autoAuth=true&amp;ctid=e30a82f4-3fdd-4882-820f-d2b6cfa037b5"
+          allowfullscreen
+        ></iframe>
+      </div>
     </div>
   </body>
 </html>

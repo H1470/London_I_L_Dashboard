@@ -3,11 +3,23 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Power BI embed</title>
-    <link rel="stylesheet" href="/css/embed.css" />
+    <title>Power BI — Genesis V7 Live</title>
+    <link rel="stylesheet" href="/css/app.css" />
+    <style>
+      body {
+        margin: 0;
+        padding: 16px;
+        background: var(--linen);
+      }
+    </style>
   </head>
-  <body class="embed-fill">
-    <!-- Replace src with your Power BI embed URL when ready -->
-    <iframe title="Power BI report" src="about:blank"></iframe>
+  <body>
+    <div class="pbi-embed-wrap pbi-embed-wrap--chart">
+      <iframe
+        title="GEnesis V7 Live"
+        src="https://app.powerbi.com/reportEmbed?reportId=2c6f7901-7525-4049-8951-4d7e342f4b96&amp;autoAuth=true&amp;ctid=e30a82f4-3fdd-4882-820f-d2b6cfa037b5"
+        allowfullscreen
+      ></iframe>
+    </div>
   </body>
 </html>

@@ -121,7 +121,7 @@
 
             <div class="card" style="margin-top: 20px">
               <h2>Daily information table</h2>
-              <table>
+              <table class="daily-info-table">
                 <thead>
                   <tr>
                     <th>Metric</th>
@@ -145,20 +145,6 @@
                     <td id="ftse250-previous">-</td>
                     <td id="ftse250-change">-</td>
                     <td id="ftse250-position">-</td>
-                  </tr>
-                  <tr>
-                    <td>GBP / USD</td>
-                    <td>Placeholder</td>
-                    <td>Placeholder</td>
-                    <td>Placeholder</td>
-                    <td>Placeholder</td>
-                  </tr>
-                  <tr>
-                    <td>UK 10 Year Gilt</td>
-                    <td>Placeholder</td>
-                    <td>Placeholder</td>
-                    <td>Placeholder</td>
-                    <td>Placeholder</td>
                   </tr>
                 </tbody>
                 <tbody id="chatham-rows"></tbody>
@@ -193,8 +179,51 @@
           <section class="page" id="deals-tracker">
             <div class="kicker">Live tracker</div>
             <h1>London I&L Deals Tracker</h1>
-            <p class="muted" style="margin-bottom: 12px">Power BI embed placeholder — set URL in <code>report-embed.html</code> when ready.</p>
-            <iframe class="embed-frame" title="Power BI deals tracker" src="/report-embed.html"></iframe>
+            <p class="muted" style="margin-bottom: 12px">
+              Power BI reports (Genesis or Map). Stay signed into your work account in this browser;
+              <code>autoAuth=true</code> uses that session.
+            </p>
+            <div class="deals-pbi-stack">
+              <div class="deals-tabs" role="tablist" aria-label="Deal tracker reports">
+                <button
+                  type="button"
+                  class="deals-tab active"
+                  role="tab"
+                  aria-selected="true"
+                  data-deals-tab="genesis"
+                  onclick="window.activateDealsPbiTab &amp;&amp; window.activateDealsPbiTab('genesis')"
+                >
+                  Genesis
+                </button>
+                <button
+                  type="button"
+                  class="deals-tab"
+                  role="tab"
+                  aria-selected="false"
+                  data-deals-tab="map"
+                  onclick="window.activateDealsPbiTab &amp;&amp; window.activateDealsPbiTab('map')"
+                >
+                  Map
+                </button>
+              </div>
+              <div class="pbi-embed-wrap pbi-embed-wrap--dual">
+                <iframe
+                  id="deals-pbi-genesis"
+                  class="deals-pbi-frame is-active"
+                  title="GEnesis V7 Live"
+                  src="https://app.powerbi.com/reportEmbed?reportId=2c6f7901-7525-4049-8951-4d7e342f4b96&amp;autoAuth=true&amp;ctid=e30a82f4-3fdd-4882-820f-d2b6cfa037b5"
+                  allowfullscreen
+                ></iframe>
+                <iframe
+                  id="deals-pbi-map"
+                  class="deals-pbi-frame"
+                  title="MAP PBI"
+                  src="https://app.powerbi.com/reportEmbed?reportId=3af5dc24-f4a4-4b89-8d68-c90da4673069&amp;autoAuth=true&amp;ctid=e30a82f4-3fdd-4882-820f-d2b6cfa037b5"
+                  allowfullscreen
+                  aria-hidden="true"
+                ></iframe>
+              </div>
+            </div>
           </section>
 
           <section class="page" id="development">

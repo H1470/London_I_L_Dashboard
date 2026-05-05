@@ -1,4 +1,5 @@
 import { loadDashboardData, loadTrialSummary } from "./dashboard.js";
+import { initDealsTrackerTabs } from "./deals-tabs.js";
 
 const pageMeta = {
   landing: {
@@ -61,3 +62,5 @@ window.showPage = showPage;
 document.querySelectorAll(".nav button").forEach((button) => {
   button.addEventListener("click", () => showPage(button.dataset.page));
 });
+
+initDealsTrackerTabs();
