@@ -1,46 +1,257 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Dashboard (trial)</title>
-    <link rel="stylesheet" href="/css/styles.css" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>London I&L Information Platform | Newmark</title>
+    <link rel="stylesheet" href="/css/app.css" />
   </head>
   <body>
-    <header class="top">
-      <strong>London I&amp;L Dashboard</strong>
-      <nav>
-        <a href="/index.html">Home</a>
-        <a href="/map.html">Map</a>
-        <a href="/report.html">Power BI</a>
-      </nav>
-    </header>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">NEWMARK</div>
+          <div class="brand-sub">London Industrial & Logistics</div>
+        </div>
 
-    <main class="page">
-      <h1>Home (fake data)</h1>
-      <p class="muted">Data from <code>/api/summary</code> — replace with real pipelines later.</p>
+        <div class="nav-label">Platform</div>
+        <nav class="nav" aria-label="Platform navigation">
+          <button type="button" class="active" data-page="landing">Landing</button>
+          <button type="button" data-page="dashboard">Dashboard</button>
+          <button type="button" data-page="bought-sold">Newmark Bought & Sold List</button>
+          <button type="button" data-page="deals-tracker">London I&L Deals Tracker</button>
+          <button type="button" data-page="development">London I&L Development</button>
+          <button type="button" data-page="news">News</button>
+          <button type="button" data-page="sources">Sources</button>
+          <button type="button" data-page="uploads">Uploads</button>
+        </nav>
 
-      <section class="card">
-        <h2>Search trial</h2>
-        <form id="search-form" class="row">
-          <input type="search" id="q" name="q" placeholder="Filter entities (e.g. london, alpha)" />
-          <button type="submit">Apply</button>
-        </form>
-      </section>
+        <div class="sidebar-note">
+          Newmark branded platform shell for London I&L market intelligence.
+        </div>
+      </aside>
 
-      <section id="kpis" class="grid"></section>
-      <section class="card">
-        <h2>Recent rows</h2>
-        <table>
-          <thead>
-            <tr><th>Entity</th><th>Region</th><th>Score</th></tr>
-          </thead>
-          <tbody id="rows"></tbody>
-        </table>
-      </section>
-      <p id="error" class="error" hidden></p>
-    </main>
+      <main class="main">
+        <header>
+          <div>
+            <strong id="page-title">London I&L Information Platform</strong>
+            <span id="page-subtitle">Landing page</span>
+          </div>
+          <span>Internal working version</span>
+        </header>
 
-    <script type="module" src="/js/home.js"></script>
+        <div class="content">
+          <section class="page active" id="landing">
+            <div class="hero">
+              <div>
+                <div class="kicker">Newmark London I&L</div>
+                <h1>London I&L Information Platform</h1>
+                <p>
+                  A central intelligence platform for London industrial and logistics market news, macro outlook,
+                  transaction intelligence, development pipeline tracking and live client-facing insight.
+                </p>
+
+                <div class="button-row">
+                  <button type="button" class="button" onclick="showPage('dashboard')">Open Dashboard</button>
+                  <button type="button" class="button secondary" onclick="showPage('development')">View Development</button>
+                </div>
+              </div>
+
+              <div class="hero-strip">
+                <div class="hero-stat">
+                  <strong>London</strong>
+                  <span>Core market focus</span>
+                </div>
+                <div class="hero-stat">
+                  <strong>I&L</strong>
+                  <span>Industrial & Logistics</span>
+                </div>
+                <div class="hero-stat">
+                  <strong>Daily</strong>
+                  <span>News and market updates</span>
+                </div>
+                <div class="hero-stat">
+                  <strong>Live</strong>
+                  <span>Expandable platform structure</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid cols-3" style="margin-top: 20px">
+              <div class="card">
+                <span class="pill">Macro</span>
+                <h3>Macro outlook</h3>
+                <p class="muted">Add rates, inflation, gilts, FX and capital markets commentary here.</p>
+              </div>
+
+              <div class="card">
+                <span class="pill">News</span>
+                <h3>Market news</h3>
+                <p class="muted">Add relevant London logistics, client and capital markets news here.</p>
+              </div>
+
+              <div class="card">
+                <span class="pill">Pipeline</span>
+                <h3>Development tracker</h3>
+                <p class="muted">Add planning, B2/B8/E(g)(iii) and development pipeline intelligence here.</p>
+              </div>
+            </div>
+          </section>
+
+          <section class="page" id="dashboard">
+            <div class="kicker">Dashboard</div>
+            <h1>London I&L Information Platform</h1>
+
+            <div class="grid cols-3">
+              <div class="card">
+                <h3>Market snapshot</h3>
+                <p class="muted">Daily financial and macro indicators can sit here.</p>
+              </div>
+
+              <div class="card">
+                <h3>Latest news</h3>
+                <p class="muted">Outlook alert summaries can sit here.</p>
+              </div>
+
+              <div class="card">
+                <h3>Key movements</h3>
+                <p class="muted">Highlight 52-week highs/lows, changes and notable market moves here.</p>
+              </div>
+            </div>
+
+            <div class="card" style="margin-top: 20px">
+              <h2>Daily information table</h2>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Metric</th>
+                    <th>Today</th>
+                    <th>Previous</th>
+                    <th>Change</th>
+                    <th>52 Week Position</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>FTSE 100</td>
+                    <td id="ftse100-today">Loading...</td>
+                    <td id="ftse100-previous">-</td>
+                    <td id="ftse100-change">-</td>
+                    <td id="ftse100-position">-</td>
+                  </tr>
+                  <tr>
+                    <td>FTSE 250</td>
+                    <td id="ftse250-today">Loading...</td>
+                    <td id="ftse250-previous">-</td>
+                    <td id="ftse250-change">-</td>
+                    <td id="ftse250-position">-</td>
+                  </tr>
+                  <tr>
+                    <td>GBP / USD</td>
+                    <td>Placeholder</td>
+                    <td>Placeholder</td>
+                    <td>Placeholder</td>
+                    <td>Placeholder</td>
+                  </tr>
+                  <tr>
+                    <td>UK 10 Year Gilt</td>
+                    <td>Placeholder</td>
+                    <td>Placeholder</td>
+                    <td>Placeholder</td>
+                    <td>Placeholder</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="card" style="margin-top: 20px">
+              <h2>Backend trial (<code>/api/summary</code>)</h2>
+              <p class="muted">Placeholder entities from the FastAPI trial endpoint.</p>
+              <div id="trial-kpis" class="grid cols-3" style="margin-top: 12px"></div>
+              <table style="margin-top: 16px">
+                <thead>
+                  <tr>
+                    <th>Entity</th>
+                    <th>Region</th>
+                    <th>Score</th>
+                  </tr>
+                </thead>
+                <tbody id="trial-rows"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="page" id="bought-sold">
+            <div class="kicker">Transactions</div>
+            <h1>Newmark Bought & Sold List</h1>
+            <p class="muted" style="margin-bottom: 12px">Trial map (Leaflet). Replace with production map data when ready.</p>
+            <iframe class="embed-frame" title="Bought and sold map" src="/map-embed.html"></iframe>
+          </section>
+
+          <section class="page" id="deals-tracker">
+            <div class="kicker">Live tracker</div>
+            <h1>London I&L Deals Tracker</h1>
+            <p class="muted" style="margin-bottom: 12px">Power BI embed placeholder — set URL in <code>report-embed.html</code> when ready.</p>
+            <iframe class="embed-frame" title="Power BI deals tracker" src="/report-embed.html"></iframe>
+          </section>
+
+          <section class="page" id="development">
+            <div class="kicker">Development</div>
+            <h1>London I&L Development</h1>
+
+            <div class="grid cols-2">
+              <div class="card">
+                <h3>Development pipeline</h3>
+                <p class="muted">Planning applications, approvals and development comps can sit here.</p>
+              </div>
+
+              <div class="card">
+                <h3>Use classes</h3>
+                <p class="muted">B2, B8 and E(g)(iii) planning intelligence can sit here.</p>
+              </div>
+            </div>
+
+            <p class="muted" style="margin-top: 16px">Trial map embed (same component as Bought &amp; Sold for now).</p>
+            <iframe class="embed-frame" style="margin-top: 8px" title="Development map" src="/map-embed.html"></iframe>
+          </section>
+
+          <section class="page" id="news">
+            <div class="kicker">News</div>
+            <h1>Latest London I&L News</h1>
+
+            <div class="card">
+              <h3>News feed placeholder</h3>
+              <p class="muted">CoStar, Green Street and Estates Gazette Outlook alert summaries can sit here.</p>
+            </div>
+          </section>
+
+          <section class="page" id="sources">
+            <div class="kicker">Sources</div>
+            <h1>Sources</h1>
+
+            <div class="card">
+              <ul>
+                <li>CoStar Outlook alerts</li>
+                <li>Green Street Outlook alerts</li>
+                <li>Estates Gazette Outlook alerts</li>
+                <li>Public market data sources</li>
+                <li>Uploaded Newmark datasets</li>
+              </ul>
+            </div>
+          </section>
+
+          <section class="page" id="uploads">
+            <div class="kicker">Uploads</div>
+            <h1>Uploads</h1>
+
+            <div class="card">
+              <p class="muted">Uploaded datasets, Excel files and platform inputs can be listed here.</p>
+            </div>
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <script type="module" src="/js/app.js"></script>
   </body>
 </html>
