@@ -1,0 +1,13 @@
+# Web API
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+
+# Future: Excel ingestion
+# pandas>=2.2.0
+# openpyxl>=3.1.0
+
+# Future: market data
+# yfinance>=0.2.0
+
+# Future: scheduled daily refresh (pick one approach)
+# apscheduler>=3.10.0

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard (trial)</title>
+    <link rel="stylesheet" href="/css/styles.css" />
+  </head>
+  <body>
+    <header class="top">
+      <strong>London I&amp;L Dashboard</strong>
+      <nav>
+        <a href="/index.html">Home</a>
+        <a href="/map.html">Map</a>
+        <a href="/report.html">Power BI</a>
+      </nav>
+    </header>
+
+    <main class="page">
+      <h1>Home (fake data)</h1>
+      <p class="muted">Data from <code>/api/summary</code> — replace with real pipelines later.</p>
+
+      <section class="card">
+        <h2>Search trial</h2>
+        <form id="search-form" class="row">
+          <input type="search" id="q" name="q" placeholder="Filter entities (e.g. london, alpha)" />
+          <button type="submit">Apply</button>
+        </form>
+      </section>
+
+      <section id="kpis" class="grid"></section>
+      <section class="card">
+        <h2>Recent rows</h2>
+        <table>
+          <thead>
+            <tr><th>Entity</th><th>Region</th><th>Score</th></tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </section>
+      <p id="error" class="error" hidden></p>
+    </main>
+
+    <script type="module" src="/js/home.js"></script>
+  </body>
+</html>
