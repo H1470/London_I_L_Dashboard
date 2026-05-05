@@ -14,7 +14,7 @@ def load_excel_snapshots() -> None:
 
 
 def load_yfinance_series() -> None:
-    """TODO: yfinance download for tickers list; persist to cache."""
+    """Live pulls: see `app.services.yfinance_market` (used by /api/indices)."""
     raise NotImplementedError
 
 

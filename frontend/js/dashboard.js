@@ -6,7 +6,46 @@ function fmtKpi(value, unit) {
   return Number(value).toLocaleString("en-GB");
 }
 
+function renderYfinanceRows(rows) {
+  const tbody = document.getElementById("yf-ticker-rows");
+  if (!tbody) return;
+
+  if (!rows || rows.length === 0) {
+    tbody.innerHTML = "";
+    return;
+  }
+
+  tbody.innerHTML = rows
+    .map((row) => {
+      if (row.error) {
+        return `<tr><td>${escapeHtml(row.label)}</td><td colspan="4">${escapeHtml(row.error)}</td></tr>`;
+      }
+      const d = Number(row.decimals) >= 0 ? Number(row.decimals) : 2;
+      const today = Number(row.price).toFixed(d);
+      const prev = Number(row.previousClose).toFixed(d);
+      const band = `${Number(row.fiftyTwoWeekLow).toFixed(d)} - ${Number(row.fiftyTwoWeekHigh).toFixed(d)}`;
+      const changeNum = parseFloat(String(row.change).replace(/[^0-9.-]/g, ""));
+      const color = changeNum >= 0 ? "#437a22" : "#a13544";
+      const changeCell = `<td style="color:${color};font-weight:bold">${escapeHtml(row.change)} (${escapeHtml(row.changePercent)}%)</td>`;
+      return `<tr><td>${escapeHtml(row.label)}</td><td>${today}</td><td>${prev}</td>${changeCell}<td>${band}</td></tr>`;
+    })
+    .join("");
+}
+
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 export async function loadDashboardData() {
+  const yfBody = document.getElementById("yf-ticker-rows");
+  if (yfBody) {
+    yfBody.innerHTML = '<tr><td colspan="5">Loading market data…</td></tr>';
+  }
+
   try {
     const data = await fetchIndices();
 
@@ -33,10 +72,15 @@ export async function loadDashboardData() {
     ftse250ChangeCell.style.fontWeight = "bold";
 
     document.getElementById("ftse250-position").textContent = `${ftse250.fiftyTwoWeekLow.toFixed(2)} - ${ftse250.fiftyTwoWeekHigh.toFixed(2)}`;
+
+    renderYfinanceRows(data.yfinance_rows || []);
   } catch (error) {
     console.error("Error loading dashboard data:", error);
     document.getElementById("ftse100-today").textContent = "Error";
     document.getElementById("ftse250-today").textContent = "Error";
+    if (yfBody) {
+      yfBody.innerHTML = `<tr><td colspan="5">${escapeHtml(error.message || error)}</td></tr>`;
+    }
   }
 }
 
