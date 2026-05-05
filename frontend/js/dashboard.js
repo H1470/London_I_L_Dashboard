@@ -6,8 +6,16 @@ function fmtKpi(value, unit) {
   return Number(value).toLocaleString("en-GB");
 }
 
-function renderYfinanceRows(rows) {
-  const tbody = document.getElementById("yf-ticker-rows");
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function renderPercentTableRows(tbodyId, rows) {
+  const tbody = document.getElementById(tbodyId);
   if (!tbody) return;
 
   if (!rows || rows.length === 0) {
@@ -32,19 +40,16 @@ function renderYfinanceRows(rows) {
     .join("");
 }
 
-function escapeHtml(s) {
-  return String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+function setTableLoading(tbodyId, message) {
+  const tbody = document.getElementById(tbodyId);
+  if (tbody) {
+    tbody.innerHTML = `<tr><td colspan="5">${escapeHtml(message)}</td></tr>`;
+  }
 }
 
 export async function loadDashboardData() {
-  const yfBody = document.getElementById("yf-ticker-rows");
-  if (yfBody) {
-    yfBody.innerHTML = '<tr><td colspan="5">Loading market data…</td></tr>';
-  }
+  setTableLoading("chatham-rows", "Loading Chatham data…");
+  setTableLoading("yf-ticker-rows", "Loading market data…");
 
   try {
     const data = await fetchIndices();
@@ -73,14 +78,14 @@ export async function loadDashboardData() {
 
     document.getElementById("ftse250-position").textContent = `${ftse250.fiftyTwoWeekLow.toFixed(2)} - ${ftse250.fiftyTwoWeekHigh.toFixed(2)}`;
 
-    renderYfinanceRows(data.yfinance_rows || []);
+    renderPercentTableRows("chatham-rows", data.chatham_rows || []);
+    renderPercentTableRows("yf-ticker-rows", data.yfinance_rows || []);
   } catch (error) {
     console.error("Error loading dashboard data:", error);
     document.getElementById("ftse100-today").textContent = "Error";
     document.getElementById("ftse250-today").textContent = "Error";
-    if (yfBody) {
-      yfBody.innerHTML = `<tr><td colspan="5">${escapeHtml(error.message || error)}</td></tr>`;
-    }
+    setTableLoading("chatham-rows", error.message || String(error));
+    setTableLoading("yf-ticker-rows", error.message || String(error));
   }
 }
 

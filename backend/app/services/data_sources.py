@@ -19,5 +19,5 @@ def load_yfinance_series() -> None:
 
 
 def load_external_api_payload() -> None:
-    """TODO: httpx/async client; auth from env."""
+    """Chatham Direct: see `app.services.chatham_rates` (CHATHAM_* env vars)."""
     raise NotImplementedError
