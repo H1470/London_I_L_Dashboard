@@ -34,12 +34,14 @@ _DEFAULT_HEADERS: dict[str, str] = {
 
 
 def _load_env() -> None:
+    """Repo root .env then backend/.env (backend wins). From app/services/: parents[3]=repo, parents[2]=backend."""
     try:
         from dotenv import load_dotenv
     except ImportError:
         return
-    env_path = Path(__file__).resolve().parents[2] / ".env"
-    load_dotenv(env_path)
+    here = Path(__file__).resolve()
+    load_dotenv(here.parents[3] / ".env", override=False)
+    load_dotenv(here.parents[2] / ".env", override=True)
 
 
 def _env_clean(raw: str | None) -> str:

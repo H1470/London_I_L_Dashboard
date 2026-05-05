@@ -13,3 +13,9 @@ export async function fetchIndices() {
   if (!res.ok) throw new Error(`API error ${res.status}`);
   return res.json();
 }
+
+export async function fetchNews() {
+  const res = await fetch(`${window.location.origin}/api/news`);
+  if (!res.ok) throw new Error(`API error ${res.status}`);
+  return res.json();
+}

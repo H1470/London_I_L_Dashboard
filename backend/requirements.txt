@@ -12,5 +12,8 @@ python-dotenv>=1.0.0
 yfinance>=0.2.40
 pandas>=2.2.0
 
+# Inbox news parsing (HTML bodies)
+beautifulsoup4>=4.12.0
+
 # Future: scheduled daily refresh (pick one approach)
 # apscheduler>=3.10.0

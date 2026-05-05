@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from app.api.routes import health, indices, summary
+from app.api.routes import health, indices, news_feed, summary
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent.parent / "frontend"
 
@@ -23,6 +23,7 @@ app.add_middleware(
 app.include_router(health.router, prefix="/api", tags=["health"])
 app.include_router(summary.router, prefix="/api", tags=["summary"])
 app.include_router(indices.router, prefix="/api", tags=["indices"])
+app.include_router(news_feed.router, prefix="/api", tags=["news"])
 
 if FRONTEND_DIR.is_dir():
     app.mount("/", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")

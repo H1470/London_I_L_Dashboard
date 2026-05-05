@@ -11,5 +11,6 @@ __pycache__/
 .vscode/
 backend/data/raw/
 backend/data/cache/
+backend/data/*.db
 *.xlsx
 *.xls

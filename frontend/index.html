@@ -191,7 +191,7 @@
                   role="tab"
                   aria-selected="true"
                   data-deals-tab="genesis"
-                  onclick="window.activateDealsPbiTab &amp;&amp; window.activateDealsPbiTab('genesis')"
+                  onclick="window.activateDealsPbiTab && window.activateDealsPbiTab('genesis')"
                 >
                   Genesis
                 </button>
@@ -201,7 +201,7 @@
                   role="tab"
                   aria-selected="false"
                   data-deals-tab="map"
-                  onclick="window.activateDealsPbiTab &amp;&amp; window.activateDealsPbiTab('map')"
+                  onclick="window.activateDealsPbiTab && window.activateDealsPbiTab('map')"
                 >
                   Map
                 </button>
@@ -248,11 +248,15 @@
 
           <section class="page" id="news">
             <div class="kicker">News</div>
-            <h1>Latest London I&L News</h1>
+            <h1>Latest London I&amp;L News</h1>
 
             <div class="card">
-              <h3>News feed placeholder</h3>
-              <p class="muted">CoStar, Green Street and Estates Gazette Outlook alert summaries can sit here.</p>
+              <p class="muted" style="margin-bottom: 12px">
+                Up to 10 items from the configured inbox (headline from subject, first link in the body). Oldest is removed
+                when an 11th arrives.
+              </p>
+              <p id="news-feed-status" class="muted" style="margin-bottom: 8px"></p>
+              <ul id="news-feed-list" class="news-feed-list"></ul>
             </div>
           </section>
 

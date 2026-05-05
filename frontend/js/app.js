@@ -1,5 +1,6 @@
 import { loadDashboardData, loadTrialSummary } from "./dashboard.js";
 import { initDealsTrackerTabs } from "./deals-tabs.js";
+import { refreshNewsPage } from "./news-page.js";
 
 const pageMeta = {
   landing: {
@@ -52,6 +53,10 @@ export function showPage(id) {
   if (id === "dashboard") {
     loadDashboardData();
     loadTrialSummary();
+  }
+
+  if (id === "news") {
+    refreshNewsPage();
   }
 
   window.scrollTo({ top: 0, behavior: "smooth" });
