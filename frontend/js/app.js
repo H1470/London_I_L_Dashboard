@@ -60,7 +60,7 @@ export function showPage(id) {
     refreshNewsPage();
   }
 
-  if (id === "sources") {
+  if (id === "bought-sold") {
     refreshNewmarkPreview();
   }
 
@@ -69,6 +69,7 @@ export function showPage(id) {
 
 window.showPage = showPage;
 window.refreshNewmarkPreview = refreshNewmarkPreview;
+window.refreshNewmarkPreviewAllRows = () => refreshNewmarkPreview({ skipMapFilters: true });
 
 document.querySelectorAll(".nav button").forEach((button) => {
   button.addEventListener("click", () => showPage(button.dataset.page));

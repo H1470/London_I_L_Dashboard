@@ -29,27 +29,188 @@ def _coords_col_index_0based() -> int:
 
 
 def _region_filter_key_index() -> int:
-    """0-based index into sqlite3.Row.keys() for region (default keys[8])."""
+    """0-based index into the SELECT result row (see _select_row_layout); default 8."""
     raw = (os.getenv("NEWMARK_REGION_KEY_INDEX") or "").strip()
     if raw.isdigit():
         return max(0, int(raw))
     return 8
 
 
+def _ge_filter_key_index() -> int | None:
+    """Layout index from NEWMARK_GE_INVOLVEMENT_KEY_INDEX only when set (no default — avoids wrong column)."""
+    raw = (os.getenv("NEWMARK_GE_INVOLVEMENT_KEY_INDEX") or "").strip()
+    if raw.isdigit():
+        return max(0, int(raw))
+    return None
+
+
 def _norm_region_token(raw: Any) -> str:
-    s = str(raw or "").strip().lower().replace("-", " ")
+    s = str(raw or "").strip().lower().replace("\u00a0", " ").replace("-", " ")
     return re.sub(r"\s+", " ", s).strip()
 
 
-def _row_passes_region_filter(r: sqlite3.Row) -> bool:
-    """Keep rows where keys[8] (by default) normalises to London or South East."""
-    allowed = frozenset({"london", "south east"})
-    keys = list(r.keys())
-    idx = _region_filter_key_index()
-    if idx < 0 or idx >= len(keys):
+def _norm_ge_involvement_value(raw: Any) -> str:
+    """Normalise GE involvement cell values (slashes / spaces); used only for value matching."""
+    s = str(raw or "").strip().lower().replace("\u00a0", " ")
+    s = re.sub(r"\s+", " ", s)
+    s = re.sub(r"\s*/\s*", "/", s)
+    return s.strip()
+
+
+_GE_INVOLVEMENT_ALLOWED: frozenset[str] = frozenset(
+    {
+        _norm_ge_involvement_value("Buying/Purchased"),
+        _norm_ge_involvement_value("Selling Sold"),
+        _norm_ge_involvement_value("Selling/Sold"),
+        _norm_ge_involvement_value("Yes"),
+    }
+)
+
+
+def _looks_like_ge_involvement_header(name: str) -> bool:
+    """Match the GE involvement column by header text (e.g. \"GE Involvement\")."""
+    low = _norm_region_token(name)
+    if "ge" not in low:
         return False
-    val = _norm_region_token(r[keys[idx]])
+    if "involvement" in low:
+        return True
+    if "involv" in low:
+        return True
+    return False
+
+
+def _layout_column_matching(names: tuple[str, ...], intent: str) -> str | None:
+    """Map configured header text to the exact column label returned by SELECT (spacing/case-insensitive)."""
+    target = _norm_region_token(intent)
+    if not target:
+        return None
+    for c in names:
+        if c == "_rowid_":
+            continue
+        if _norm_region_token(c) == target:
+            return c
+    return None
+
+
+# Cache: (column_names, db_path_key, table_name, db_mtime) so ingest / replace DB refreshes layout.
+_LAYOUT_CACHE: tuple[tuple[str, ...], str, str, float] | None = None
+
+
+def _select_row_layout() -> tuple[str, ...]:
+    """
+    Column names in the exact order returned by `SELECT rowid AS _rowid_, * FROM <table>`.
+    This matches sqlite3.Row integer indices and reliable access by name (Cursor.description),
+    avoiding subtle mismatches with list(r.keys()).
+    """
+    global _LAYOUT_CACHE
+    dbp = _db_path()
+    table = _table_name()
+    db_key = str(dbp.resolve())
+    try:
+        mtime = float(dbp.stat().st_mtime) if dbp.exists() else -1.0
+    except OSError:
+        mtime = -1.0
+    if _LAYOUT_CACHE is not None:
+        names0, kdb, kt, km = _LAYOUT_CACHE
+        if kdb == db_key and kt == table and km == mtime:
+            return names0
+    try:
+        with _conn() as c:
+            c.row_factory = sqlite3.Row
+            cur = c.execute(f"SELECT rowid AS _rowid_, * FROM {table} WHERE 0")
+            desc = cur.description
+    except Exception:  # noqa: BLE001
+        return ()
+    if not desc:
+        return ()
+    names = tuple(str(d[0]) for d in desc)
+    _LAYOUT_CACHE = (names, db_key, table, mtime)
+    return names
+
+
+def _region_column_name() -> str | None:
+    """Result column used for London / South East filter."""
+    env = (os.getenv("NEWMARK_REGION_COLUMN") or "").strip()
+    names = _select_row_layout()
+    if not names:
+        return None
+    if env:
+        hit = _layout_column_matching(names, env)
+        if hit:
+            return hit
+        if env in names:
+            return env
+        return None
+    idx = _region_filter_key_index()
+    if idx < 0 or idx >= len(names):
+        return None
+    return names[idx]
+
+
+def _ge_column_name() -> str | None:
+    """
+    Resolve GE involvement column for filtering: env (fuzzy-matched to layout), explicit index,
+    canonical \"GE Involvement\", then header heuristic.
+    """
+    names = _select_row_layout()
+    if not names:
+        return None
+    env = (os.getenv("NEWMARK_GE_INVOLVEMENT_COLUMN") or "").strip()
+    if env:
+        hit = _layout_column_matching(names, env)
+        if hit:
+            return hit
+        if env in names:
+            return env
+        return None
+    idx = _ge_filter_key_index()
+    if idx is not None and 0 <= idx < len(names):
+        return names[idx]
+    canon = _layout_column_matching(names, "GE Involvement")
+    if canon:
+        return canon
+    for col in names:
+        if col == "_rowid_":
+            continue
+        if _looks_like_ge_involvement_header(col):
+            return col
+    return None
+
+
+def _row_value(r: sqlite3.Row, column: str) -> Any:
+    try:
+        return r[column]
+    except (KeyError, IndexError, ValueError):
+        return None
+
+
+def _row_passes_region_filter(r: sqlite3.Row) -> bool:
+    """Keep rows where the region column normalises to London or South East."""
+    allowed = frozenset({"london", "south east"})
+    col = _region_column_name()
+    if not col:
+        return False
+    val = _norm_region_token(_row_value(r, col))
     return val in allowed
+
+
+def _row_passes_ge_involvement_filter(r: sqlite3.Row) -> bool:
+    """Keep rows where the GE column matches the allowed list. Unresolved column rejects rows (no silent skip)."""
+    allowed = _GE_INVOLVEMENT_ALLOWED
+    col = _ge_column_name()
+    if not col:
+        return False
+    val = _norm_ge_involvement_value(_row_value(r, col))
+    return val in allowed
+
+
+def _row_passes_newmark_filters(r: sqlite3.Row) -> bool:
+    """Both filters must pass (short-circuit AND — same as running one after the other, not parallel)."""
+    if not _row_passes_region_filter(r):
+        return False
+    if not _row_passes_ge_involvement_filter(r):
+        return False
+    return True
 
 
 _COORDS_RE = re.compile(
@@ -132,6 +293,16 @@ def table_schema() -> dict[str, Any]:
             "tables_present": _list_tables(),
             "coords_col_index_0based": _coords_col_index_0based(),
         }
+    layout = _select_row_layout()
+    reg_col = _region_column_name()
+    ge_col = _ge_column_name()
+    ge_from_env = bool(
+        (os.getenv("NEWMARK_GE_INVOLVEMENT_KEY_INDEX") or "").strip().isdigit()
+        or (os.getenv("NEWMARK_GE_INVOLVEMENT_COLUMN") or "").strip()
+    )
+    region_from_env = bool((os.getenv("NEWMARK_REGION_COLUMN") or "").strip())
+    ge_idx = layout.index(ge_col) if ge_col and ge_col in layout else None
+    reg_idx = layout.index(reg_col) if reg_col and reg_col in layout else None
     return {
         "ok": True,
         "db_path": str(_db_path()),
@@ -148,10 +319,24 @@ def table_schema() -> dict[str, Any]:
             for r in cols
         ],
         "coords_col_index_0based": _coords_col_index_0based(),
+        "select_row_layout": list(layout),
+        "region_filter_key_index": _region_filter_key_index(),
+        "region_column_name": reg_col,
+        "region_column_from_env": region_from_env,
+        "ge_filter_key_index": _ge_filter_key_index(),
+        "ge_involvement_row_key_index": ge_idx,
+        "ge_involvement_column_name": ge_col,
+        "ge_involvement_key_from_env": ge_from_env,
+        "ge_involvement_allowed": [
+            "Buying/Purchased",
+            "Selling Sold",
+            "Selling/Sold",
+            "Yes",
+        ],
     }
 
 
-def preview_rows(limit: int = 100, offset: int = 0, *, skip_region_filter: bool = False) -> dict[str, Any]:
+def preview_rows(limit: int = 20, offset: int = 0, *, skip_region_filter: bool = False) -> dict[str, Any]:
     table = _table_name()
     cap = max(1, min(int(limit), 200))
     off = max(0, int(offset))
@@ -173,11 +358,28 @@ def preview_rows(limit: int = 100, offset: int = 0, *, skip_region_filter: bool 
         filtered = list(all_rows)
         filter_meta: dict[str, Any] = {"applied": False}
     else:
-        filtered = [r for r in all_rows if _row_passes_region_filter(r)]
+        filtered = [r for r in all_rows if _row_passes_newmark_filters(r)]
+        layout = _select_row_layout()
+        reg_col = _region_column_name()
+        ge_col = _ge_column_name()
+        ge_idx = layout.index(ge_col) if ge_col and ge_col in layout else None
+        reg_idx = layout.index(reg_col) if reg_col and reg_col in layout else None
         filter_meta = {
             "applied": True,
-            "region_key_index": _region_filter_key_index(),
-            "values": ["London", "South East"],
+            "region": {
+                "row_key_index": _region_filter_key_index(),
+                "column": reg_col,
+                "layout_index": reg_idx,
+                "values": ["London", "South East"],
+            },
+            "ge_involvement": {
+                "row_key_index": _ge_filter_key_index(),
+                "column": ge_col,
+                "layout_index": ge_idx,
+                "values": ["Buying/Purchased", "Selling Sold", "Selling/Sold", "Yes"],
+                "active": ge_col is not None,
+                "disabled": ge_col is None,
+            },
         }
     page = filtered[off : off + cap]
     if not page:
@@ -215,6 +417,7 @@ def iter_points(limit: int = 5000) -> Iterable[dict[str, Any]]:
     table = _table_name()
     coords_idx = _coords_col_index_0based()
     cap = max(1, min(int(limit), 20000))
+    layout = _select_row_layout()
 
     with _conn() as c:
         c.row_factory = sqlite3.Row
@@ -226,17 +429,17 @@ def iter_points(limit: int = 5000) -> Iterable[dict[str, Any]]:
 
     out: list[dict[str, Any]] = []
     for r in rows:
-        if not _row_passes_region_filter(r):
+        if not _row_passes_newmark_filters(r):
             continue
-        keys = list(r.keys())
-        if coords_idx >= len(keys):
+        if coords_idx < 0 or coords_idx >= len(layout):
             continue
-        coords_raw = r[keys[coords_idx]]
+        coord_col = layout[coords_idx]
+        coords_raw = r[coord_col]
         parsed = _parse_coords(coords_raw)
         if not parsed:
             continue
         lat, lon = parsed
-        props = {k: r[k] for k in keys if k not in {"_rowid_"}}
+        props = {k: r[k] for k in layout if k not in {"_rowid_"}}
         out.append({"id": int(r["_rowid_"]), "lat": lat, "lon": lon, "props": props})
         if len(out) >= cap:
             break

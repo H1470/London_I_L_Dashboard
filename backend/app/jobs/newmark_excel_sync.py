@@ -4,16 +4,17 @@ Ingest Newmark tracker workbooks into local SQLite databases, then merge into on
 Run:
   python -m app.jobs.newmark_excel_sync
 
-Edit NEWMARK_SOURCES below: each workbook can use different Excel column numbers (1-based),
-as long as every source selects the SAME COUNT of columns in the SAME logical order so the
-concatenated `master_all` table lines up. `drop_top_rows` can also differ per file if needed.
+For each source: skip the top `drop_top_rows` rows, then take only the Excel columns listed in
+`columns_1based`, in that exact order (not sorted by column index). You choose indices per
+workbook so each sheet produces the same column count and the same logical field order; the
+merge then stacks rows without widening the table.
 
-Same field, different Excel positions: e.g. two files read column 68 and one reads 67 — use the
-same list *length* and order of meanings, but put 67 vs 68 in the slot where that field lives.
-After `skiprows`, pandas uses the header row; `pd.concat` aligns merged columns by header name,
-so keep the same header text in that column on each sheet (or rename in Excel) so the merge
-matches. Each workbook still gets its own SQLite file first, then rows are appended into
-`newmark_combined.db` as today.
+The first workbook’s header names (after duplicate-name fixing for SQLite) are reused for every
+other source by column position so `pd.concat` does not create extra columns from small header
+text differences.
+
+Same field, different Excel positions: e.g. two files read column 68 and one reads 67 — keep the
+same list length and meaning order; put 67 vs 68 in the slot for that field only.
 """
 
 from __future__ import annotations
@@ -233,17 +234,17 @@ def main() -> None:
             }
         )
 
+    canonical_columns = list(frames[0].columns)
+    for i in range(1, len(frames)):
+        f = frames[i]
+        if f.shape[1] != len(canonical_columns):
+            raise ValueError(
+                f"Column count mismatch at concat: first frame has {len(canonical_columns)} cols, "
+                f"frame {i} ({NEWMARK_SOURCES[i]['source_tag']}) has {f.shape[1]}."
+            )
+        f.columns = canonical_columns
+
     combined_df = pd.concat(frames, ignore_index=True, sort=False)
-    cols = list(combined_df.columns)
-    seen: dict[str, int] = {}
-    out_cols: list[str] = []
-    for c in cols:
-        base = " ".join(str(c).replace("\u00A0", " ").split()).strip() or "col"
-        key = base.casefold()
-        n = seen.get(key, 0) + 1
-        seen[key] = n
-        out_cols.append(base if n == 1 else f"{base}__{n}")
-    combined_df.columns = out_cols
 
     combined_db = data_dir / "newmark_combined.db"
     combined_table = "master_all"

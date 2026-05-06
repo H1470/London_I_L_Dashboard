@@ -29,7 +29,7 @@ def get_newmark_preview(
     offset: int = Query(default=0, ge=0, le=1_000_000),
     skip_region_filter: bool = Query(
         default=False,
-        description="If true, return raw table rows (no London/South East filter). Use for inspecting column data.",
+        description="If true, return raw table rows (no map filters: region or GE involvement). Use for inspecting column data.",
     ),
 ):
     response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"

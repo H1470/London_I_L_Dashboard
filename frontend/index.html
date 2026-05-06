@@ -158,6 +158,50 @@
             <h1>Newmark Bought & Sold List</h1>
             <p class="muted" style="margin-bottom: 12px">Trial map (Leaflet). Replace with production map data when ready.</p>
             <iframe class="embed-frame" title="Bought and sold map" src="/map-embed.html"></iframe>
+
+            <div class="card" style="margin-top: 20px">
+              <h2>Newmark table preview (<code>master_all</code>)</h2>
+              <p class="muted">
+                Default view is the same post-filter dataset as the Newmark map (merged <code>master_all</code> in
+                <code>newmark_combined.db</code>, then London / South East + GE involvement), up to 100 rows. The second
+                button loads the raw table for debugging only — it does not match map markers.
+              </p>
+              <div class="button-row" style="margin-top: 10px">
+                <button
+                  type="button"
+                  class="button secondary"
+                  onclick="(() => { const s=document.getElementById('newmark-preview-status'); if (!window.refreshNewmarkPreview) { if (s) s.textContent='Preview script not loaded (window.refreshNewmarkPreview is undefined).'; return; } window.refreshNewmarkPreview(); })()"
+                >
+                  Reload preview (same as map)
+                </button>
+                <button
+                  type="button"
+                  class="button secondary"
+                  onclick="(() => { const s=document.getElementById('newmark-preview-status'); if (!window.refreshNewmarkPreviewAllRows) { if (s) s.textContent='Preview script not loaded.'; return; } window.refreshNewmarkPreviewAllRows(); })()"
+                >
+                  Debug: full table (no map filters)
+                </button>
+              </div>
+              <p id="newmark-preview-status" class="muted" style="margin-top: 10px"></p>
+              <div
+                style="
+                  overflow: auto;
+                  max-height: 720px;
+                  min-height: 140px;
+                  border: 1px solid rgba(255, 255, 255, 0.06);
+                  border-radius: 12px;
+                "
+              >
+                <table id="newmark-preview-table" style="margin: 0">
+                  <thead id="newmark-preview-head"></thead>
+                  <tbody id="newmark-preview-body">
+                    <tr>
+                      <td class="muted">Open this page and use “Reload preview (same as map)” to load rows.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </section>
 
           <section class="page" id="deals-tracker">
@@ -256,42 +300,6 @@
                 <li>Public market data sources</li>
                 <li>Uploaded Newmark datasets</li>
               </ul>
-            </div>
-
-            <div class="card" style="margin-top: 20px">
-              <h2>Newmark table preview (<code>master_all</code>)</h2>
-              <p class="muted">
-                Top 100 rows from <code>/api/newmark/preview?skip_region_filter=true</code> (full table for column checks;
-                the map still uses the London / South East filter).
-              </p>
-              <div class="button-row" style="margin-top: 10px">
-                <button
-                  type="button"
-                  class="button secondary"
-                  onclick="(() => { const s=document.getElementById('newmark-preview-status'); if (!window.refreshNewmarkPreview) { if (s) s.textContent='Preview script not loaded (window.refreshNewmarkPreview is undefined).'; return; } window.refreshNewmarkPreview(); })()"
-                >
-                  Reload preview
-                </button>
-              </div>
-              <p id="newmark-preview-status" class="muted" style="margin-top: 10px"></p>
-              <div
-                style="
-                  overflow: auto;
-                  max-height: 720px;
-                  min-height: 140px;
-                  border: 1px solid rgba(255, 255, 255, 0.06);
-                  border-radius: 12px;
-                "
-              >
-                <table id="newmark-preview-table" style="margin: 0">
-                  <thead id="newmark-preview-head"></thead>
-                  <tbody id="newmark-preview-body">
-                    <tr>
-                      <td class="muted">Click “Reload preview” to load rows.</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
             </div>
           </section>
 

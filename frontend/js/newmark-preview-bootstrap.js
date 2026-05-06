@@ -5,3 +5,4 @@
 import { refreshNewmarkPreview } from "./newmark-preview.js";
 
 window.refreshNewmarkPreview = refreshNewmarkPreview;
+window.refreshNewmarkPreviewAllRows = () => refreshNewmarkPreview({ skipMapFilters: true });

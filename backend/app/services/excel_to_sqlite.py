@@ -33,6 +33,20 @@ def _mapped_drive_hint(path: Path) -> str | None:
     return None
 
 
+def _reorder_columns_after_int_usecols(df: pd.DataFrame, keep_columns_1based: list[int]) -> pd.DataFrame:
+    """
+    pandas read_excel(usecols=[ints]) ignores list order and uses ascending column index.
+    Restore the caller's 1-based Excel column order after a subset read.
+    """
+    order_0 = [max(0, int(c) - 1) for c in keep_columns_1based]
+    unique_sorted = sorted(set(order_0))
+    if not unique_sorted:
+        return df
+    pos = {excel_idx: j for j, excel_idx in enumerate(unique_sorted)}
+    iloc_order = [pos[c] for c in order_0]
+    return df.iloc[:, iloc_order].copy()
+
+
 def _dedupe_columns(cols: list[object]) -> list[str]:
     """
     SQLite (and pandas.to_sql) requires unique column names.
@@ -80,8 +94,10 @@ def read_workbook_sheet(
 
     stat = wb.stat()
     if keep_columns_1based:
-        keep_cols_0based = sorted({max(0, c - 1) for c in keep_columns_1based})
+        order_0 = [max(0, int(c) - 1) for c in keep_columns_1based]
+        keep_cols_0based = sorted(set(order_0))
     else:
+        order_0 = None
         keep_cols_0based = None
 
     try:
@@ -102,6 +118,8 @@ def read_workbook_sheet(
             "sheet": sheet_name,
         }
 
+    if order_0 is not None:
+        df = _reorder_columns_after_int_usecols(df, keep_columns_1based)
     df.columns = _dedupe_columns(list(df.columns))
 
     return {
@@ -168,8 +186,10 @@ def sync_workbook_to_sqlite(
         missing = []
         sheet_names = available_sheets
     if keep_columns_1based:
-        keep_cols_0based = sorted({max(0, c - 1) for c in keep_columns_1based})
+        order_0 = [max(0, int(c) - 1) for c in keep_columns_1based]
+        keep_cols_0based = sorted(set(order_0))
     else:
+        order_0 = None
         keep_cols_0based = None
 
     sheet_summaries: list[dict[str, Any]] = []
@@ -221,6 +241,8 @@ def sync_workbook_to_sqlite(
                 sheet_summaries.append({"sheet": sheet, "ok": False, "error": str(exc)})
                 continue
 
+            if order_0 is not None:
+                df = _reorder_columns_after_int_usecols(df, keep_columns_1based)
             df.columns = _dedupe_columns(list(df.columns))
 
             table = table_name or f"sheet_{_safe_table_name(sheet)}"
