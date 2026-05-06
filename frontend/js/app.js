@@ -1,3 +1,7 @@
+/**
+ * Shell navigation: toggles ``.page`` sections, updates header title/subtitle, triggers
+ * page-specific data loads (dashboard, news, Newmark preview on Bought & Sold).
+ */
 import { loadDashboardData, loadTrialSummary } from "./dashboard.js";
 import { initDealsTrackerTabs } from "./deals-tabs.js";
 import { refreshNewmarkPreview } from "./newmark-preview.js";

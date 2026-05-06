@@ -1,3 +1,5 @@
+"""Trial dashboard summary JSON (KPIs + series + recent rows); optional ``q`` filter."""
+
 from typing import Optional
 
 from fastapi import APIRouter, Query

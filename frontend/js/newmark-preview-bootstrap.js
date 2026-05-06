@@ -1,6 +1,6 @@
 /**
- * Assigns Newmark preview to window before app.js runs.
- * If app.js fails on another import, the Sources preview button still works.
+ * Assigns Newmark preview helpers to ``window`` before ``app.js`` runs so inline
+ * onclick handlers work even if a later module import fails.
  */
 import { refreshNewmarkPreview } from "./newmark-preview.js";
 

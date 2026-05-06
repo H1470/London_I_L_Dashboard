@@ -1,3 +1,5 @@
+"""Minimal liveness endpoint for uptime checks and load balancers."""
+
 from fastapi import APIRouter
 
 router = APIRouter()

@@ -1,3 +1,5 @@
+"""Dashboard market snapshot: placeholder FTSE + Chatham rates + yfinance tickers."""
+
 from fastapi import APIRouter, Response
 
 from app.data.fake_indices import get_indices_snapshot

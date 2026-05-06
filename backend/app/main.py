@@ -1,4 +1,10 @@
-"""FastAPI entrypoint: REST API + serves the static frontend in development."""
+"""
+FastAPI entrypoint: REST API + static frontend when ``../frontend`` exists.
+
+Routers live under ``/api``. Static mount at ``/`` uses ``html=True`` so ``/`` serves
+``index.html`` and relative asset paths work. For production you may serve the UI
+from a CDN instead and keep only the API here.
+"""
 
 from pathlib import Path
 

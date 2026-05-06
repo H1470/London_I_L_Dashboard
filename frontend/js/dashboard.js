@@ -1,3 +1,7 @@
+/**
+ * Dashboard section: KPIs from ``/api/summary`` and market tables from ``/api/indices``
+ * (Chatham + yfinance rows rendered into ``#chatham-rows`` / ``#yf-ticker-rows``).
+ */
 import { fetchIndices, fetchSummary } from "./api.js";
 
 function fmtKpi(value, unit) {

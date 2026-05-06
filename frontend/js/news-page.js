@@ -1,3 +1,4 @@
+/** News section: fetches ``/api/news`` and renders ``#news-feed-list`` / status. */
 import { fetchNews } from "./api.js";
 
 function escapeHtml(s) {

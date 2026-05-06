@@ -1,3 +1,7 @@
+/**
+ * Newmark ``master_all`` table preview for the Bought & Sold page: calls ``/api/newmark/preview``.
+ * Default = same filters as map; ``skipMapFilters`` loads raw merged rows for debugging.
+ */
 function escapeHtml(s) {
   return String(s ?? "")
     .replaceAll("&", "&amp;")

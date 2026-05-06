@@ -1,3 +1,11 @@
+"""
+Excel → SQLite helpers: read sheets with ``openpyxl``/pandas, optional row skip and
+column subset (1-based Excel indices). ``usecols`` ignores list order; we reorder with
+``_reorder_columns_after_int_usecols`` so merged workbooks stay column-aligned.
+
+``_dedupe_columns`` keeps SQLite happy when Excel repeats a header (e.g. two "Address").
+"""
+
 from __future__ import annotations
 
 import re

@@ -1,4 +1,7 @@
-/** Same-origin when the UI is served by FastAPI. */
+/**
+ * Small same-origin fetch helpers (expects UI and API on one origin, e.g. FastAPI
+ * serving ``frontend/``). Throws on non-OK HTTP.
+ */
 
 export async function fetchSummary(query) {
   const url = new URL("/api/summary", window.location.origin);

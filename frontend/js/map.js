@@ -1,3 +1,7 @@
+/**
+ * Newmark map (Bought & Sold): Leaflet + OSM, loads GeoJSON from ``/api/newmark/geojson``.
+ * Standalone hosts: ``map.html`` / ``map-embed.html``. UK-wide default view for iframe stability.
+ */
 const london = [51.5074, -0.1278];
 
 /** Fixed centre + zoom: reliable inside iframes (fitBounds on first paint often mis-zooms). */

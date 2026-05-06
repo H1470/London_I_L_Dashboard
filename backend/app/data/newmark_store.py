@@ -1,3 +1,19 @@
+"""
+Newmark combined SQLite: GeoJSON for the map, HTML preview, and schema.
+
+**Database:** ``NEWMARK_DB_PATH`` or default ``backend/data/newmark_combined.db``,
+table ``NEWMARK_TABLE`` / ``master_all``.
+
+**Map filters (AND):** London or South East on the region column; GE involvement must
+match a small allow-list. Column resolution uses ``SELECT rowid AS _rowid_, *`` layout
+(see ``_select_row_layout``) so names match Cursor.description order.
+
+**Preview:** ``preview_rows`` can skip both filters (``skip_region_filter``) for raw QA.
+
+**Env (common):** ``NEWMARK_COORD_COL_INDEX``, ``NEWMARK_REGION_KEY_INDEX`` /
+``NEWMARK_REGION_COLUMN``, ``NEWMARK_GE_INVOLVEMENT_*`` — see ``backend/.env.example``.
+"""
+
 from __future__ import annotations
 
 import os

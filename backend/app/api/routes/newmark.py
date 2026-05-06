@@ -1,3 +1,5 @@
+"""Newmark HTTP API: GeoJSON map features, PRAGMA-like schema, and filtered HTML preview."""
+
 from __future__ import annotations
 
 from fastapi import APIRouter, Query, Response
