@@ -39,7 +39,7 @@ export async function refreshNewmarkPreview() {
 
   setStatus("Loading preview…");
   try {
-    const res = await fetch("/api/newmark/preview?limit=20", { cache: "no-store" });
+    const res = await fetch("/api/newmark/preview?limit=100&skip_region_filter=true", { cache: "no-store" });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     if (data && data.ok === false) {
@@ -50,7 +50,11 @@ export async function refreshNewmarkPreview() {
     renderPreview(data);
     const cols = (data.columns || []).length;
     const n = (data.rows || []).length;
-    setStatus(`Showing ${n} rows × ${cols} columns from ${data.table || "table"}.`);
+    const total = data.total_row_count;
+    const pool = data.preview_row_count;
+    const filt = data.filter?.applied ? "region filter on" : "all rows (no region filter)";
+    const extra = total != null && pool != null ? ` — ${n} of ${pool} in preview slice (${total} in table, ${filt})` : "";
+    setStatus(`Showing ${n} rows × ${cols} columns from ${data.table || "table"}${extra}.`);
   } catch (e) {
     setStatus(`Could not load preview: ${e?.message || e}`);
   }

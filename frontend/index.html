@@ -151,22 +151,6 @@
                 <tbody id="yf-ticker-rows"></tbody>
               </table>
             </div>
-
-            <div class="card" style="margin-top: 20px">
-              <h2>Backend trial (<code>/api/summary</code>)</h2>
-              <p class="muted">Placeholder entities from the FastAPI trial endpoint.</p>
-              <div id="trial-kpis" class="grid cols-3" style="margin-top: 12px"></div>
-              <table style="margin-top: 16px">
-                <thead>
-                  <tr>
-                    <th>Entity</th>
-                    <th>Region</th>
-                    <th>Score</th>
-                  </tr>
-                </thead>
-                <tbody id="trial-rows"></tbody>
-              </table>
-            </div>
           </section>
 
           <section class="page" id="bought-sold">
@@ -276,7 +260,10 @@
 
             <div class="card" style="margin-top: 20px">
               <h2>Newmark table preview (<code>master_all</code>)</h2>
-              <p class="muted">Top 20 rows from <code>/api/newmark/preview</code> for quick column verification.</p>
+              <p class="muted">
+                Top 100 rows from <code>/api/newmark/preview?skip_region_filter=true</code> (full table for column checks;
+                the map still uses the London / South East filter).
+              </p>
               <div class="button-row" style="margin-top: 10px">
                 <button
                   type="button"
@@ -290,7 +277,7 @@
               <div
                 style="
                   overflow: auto;
-                  max-height: 520px;
+                  max-height: 720px;
                   min-height: 140px;
                   border: 1px solid rgba(255, 255, 255, 0.06);
                   border-radius: 12px;

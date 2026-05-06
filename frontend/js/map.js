@@ -1,10 +1,35 @@
 const london = [51.5074, -0.1278];
 
-const map = L.map("map").setView(london, 10);
+/** Fixed centre + zoom: reliable inside iframes (fitBounds on first paint often mis-zooms). */
+const UK_CENTER = L.latLng(54.2, -3.5);
+const UK_ZOOM = 5;
+
+const map = L.map("map");
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   maxZoom: 19,
   attribution: "&copy; OpenStreetMap contributors",
 }).addTo(map);
+
+/**
+ * Whole-UK view. Re-run after layout: iframe maps often report wrong size on first paint.
+ */
+function applyUkMapFrame() {
+  map.invalidateSize();
+  map.setView(UK_CENTER, UK_ZOOM, { animate: false });
+}
+
+function scheduleUkMapFrame() {
+  applyUkMapFrame();
+  requestAnimationFrame(() => {
+    applyUkMapFrame();
+    setTimeout(applyUkMapFrame, 50);
+    setTimeout(applyUkMapFrame, 200);
+    setTimeout(applyUkMapFrame, 600);
+  });
+}
+
+map.whenReady(() => scheduleUkMapFrame());
+window.addEventListener("resize", () => applyUkMapFrame());
 
 function escapeHtml(s) {
   return String(s ?? "")
@@ -15,28 +40,31 @@ function escapeHtml(s) {
     .replaceAll("'", "&#039;");
 }
 
-/** Column order matches combined `master_all` row keys (0-based indices). */
-const TOOLTIP_BY_COL_INDEX = [
-  { i: 1, label: "Source" },
-  { i: 5, label: "Address" },
-  { i: 11, label: "Sub-sector" },
-  { i: 15, label: "Floor area" },
-  { i: 21, label: "No. of key tenants" },
+/**
+ * Tooltip fields by 1-based column position in `master_all` property key order
+ * (same order as GeoJSON `properties` / SQLite row columns).
+ */
+const TOOLTIP_BY_COL_1BASED = [
+  { col: 1, label: "Source" },
+  { col: 5, label: "Address" },
+  { col: 11, label: "Sub-sector" },
+  { col: 15, label: "Floor area" },
+  { col: 21, label: "No. of key tenants" },
 ];
 
-function tooltipHtmlFromColumnOrder(props) {
+function tooltipTextFromColumnOrder(props) {
   const keys = Object.keys(props ?? {});
-  const parts = [];
-  for (const { i, label } of TOOLTIP_BY_COL_INDEX) {
+  const lines = [];
+  for (const { col, label } of TOOLTIP_BY_COL_1BASED) {
+    const i = col - 1;
+    if (i < 0 || i >= keys.length) continue;
     const k = keys[i];
-    if (!k) continue;
     const v = props[k];
     if (v == null || String(v).trim() === "") continue;
-    parts.push(
-      `<div class="newmark-tip-row"><span class="newmark-tip-label">${escapeHtml(label)}</span> ${escapeHtml(String(v))}</div>`
-    );
+    const flat = String(v).replace(/\s+/g, " ").trim();
+    lines.push(`${label}: ${flat}`);
   }
-  return parts.length ? parts.join("") : `<span class="muted">No details</span>`;
+  return lines.length ? lines.join("\n") : "No details";
 }
 
 function popupHtml(props) {
@@ -75,25 +103,22 @@ async function loadNewmarkPoints() {
 loadNewmarkPoints()
   .then((geojson) => {
     const layer = L.geoJSON(geojson, {
-      pointToLayer: (feature, latlng) => L.circleMarker(latlng, { radius: 6, weight: 1, fillOpacity: 0.9 }),
+      pointToLayer: (feature, latlng) =>
+        L.circleMarker(latlng, { radius: 8, weight: 2, fillOpacity: 0.88, interactive: true }),
       onEachFeature: (feature, l) => {
         const props = feature?.properties ?? {};
         l.bindPopup(popupHtml(props));
-        l.bindTooltip(tooltipHtmlFromColumnOrder(props), {
+        l.bindTooltip(tooltipTextFromColumnOrder(props), {
           sticky: true,
-          direction: "top",
-          opacity: 0.95,
+          direction: "auto",
+          opacity: 1,
           className: "newmark-map-tip",
-          interactive: true,
         });
       },
     }).addTo(map);
-    try {
-      map.fitBounds(layer.getBounds(), { padding: [20, 20] });
-    } catch {
-      // ignore empty bounds
-    }
+    scheduleUkMapFrame();
   })
   .catch((err) => {
     L.marker(london).addTo(map).bindPopup(`Could not load Newmark points: ${escapeHtml(err.message)}`);
+    scheduleUkMapFrame();
   });

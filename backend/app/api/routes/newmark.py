@@ -25,9 +25,13 @@ def get_newmark_schema(response: Response):
 @router.get("/newmark/preview")
 def get_newmark_preview(
     response: Response,
-    limit: int = Query(default=20, ge=1, le=200),
+    limit: int = Query(default=100, ge=1, le=200),
     offset: int = Query(default=0, ge=0, le=1_000_000),
+    skip_region_filter: bool = Query(
+        default=False,
+        description="If true, return raw table rows (no London/South East filter). Use for inspecting column data.",
+    ),
 ):
     response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
-    return preview_rows(limit=limit, offset=offset)
+    return preview_rows(limit=limit, offset=offset, skip_region_filter=skip_region_filter)
 

@@ -28,6 +28,30 @@ def _coords_col_index_0based() -> int:
     return 7
 
 
+def _region_filter_key_index() -> int:
+    """0-based index into sqlite3.Row.keys() for region (default keys[8])."""
+    raw = (os.getenv("NEWMARK_REGION_KEY_INDEX") or "").strip()
+    if raw.isdigit():
+        return max(0, int(raw))
+    return 8
+
+
+def _norm_region_token(raw: Any) -> str:
+    s = str(raw or "").strip().lower().replace("-", " ")
+    return re.sub(r"\s+", " ", s).strip()
+
+
+def _row_passes_region_filter(r: sqlite3.Row) -> bool:
+    """Keep rows where keys[8] (by default) normalises to London or South East."""
+    allowed = frozenset({"london", "south east"})
+    keys = list(r.keys())
+    idx = _region_filter_key_index()
+    if idx < 0 or idx >= len(keys):
+        return False
+    val = _norm_region_token(r[keys[idx]])
+    return val in allowed
+
+
 _COORDS_RE = re.compile(
     r"""
     (?:
@@ -127,14 +151,14 @@ def table_schema() -> dict[str, Any]:
     }
 
 
-def preview_rows(limit: int = 20, offset: int = 0) -> dict[str, Any]:
+def preview_rows(limit: int = 100, offset: int = 0, *, skip_region_filter: bool = False) -> dict[str, Any]:
     table = _table_name()
     cap = max(1, min(int(limit), 200))
     off = max(0, int(offset))
     try:
         with _conn() as c:
             c.row_factory = sqlite3.Row
-            rows = c.execute(f"SELECT rowid AS _rowid_, * FROM {table} LIMIT ? OFFSET ?", (cap, off)).fetchall()
+            all_rows = c.execute(f"SELECT rowid AS _rowid_, * FROM {table}").fetchall()
     except Exception as exc:  # noqa: BLE001
         return {
             "ok": False,
@@ -145,15 +169,40 @@ def preview_rows(limit: int = 20, offset: int = 0) -> dict[str, Any]:
             "columns": [],
             "rows": [],
         }
-    if not rows:
-        return {"ok": True, "db_path": str(_db_path()), "table": table, "tables_present": _list_tables(), "columns": [], "rows": []}
-    columns = list(rows[0].keys())
-    out_rows = [[r[col] for col in columns] for r in rows]
+    if skip_region_filter:
+        filtered = list(all_rows)
+        filter_meta: dict[str, Any] = {"applied": False}
+    else:
+        filtered = [r for r in all_rows if _row_passes_region_filter(r)]
+        filter_meta = {
+            "applied": True,
+            "region_key_index": _region_filter_key_index(),
+            "values": ["London", "South East"],
+        }
+    page = filtered[off : off + cap]
+    if not page:
+        cols = list(filtered[0].keys()) if filtered else (list(all_rows[0].keys()) if all_rows else [])
+        return {
+            "ok": True,
+            "db_path": str(_db_path()),
+            "table": table,
+            "tables_present": _list_tables(),
+            "filter": filter_meta,
+            "total_row_count": len(all_rows),
+            "preview_row_count": len(filtered),
+            "columns": cols,
+            "rows": [],
+        }
+    columns = list(page[0].keys())
+    out_rows = [[r[col] for col in columns] for r in page]
     return {
         "ok": True,
         "db_path": str(_db_path()),
         "table": table,
         "tables_present": _list_tables(),
+        "filter": filter_meta,
+        "total_row_count": len(all_rows),
+        "preview_row_count": len(filtered),
         "columns": columns,
         "rows": out_rows,
     }
@@ -169,7 +218,7 @@ def iter_points(limit: int = 5000) -> Iterable[dict[str, Any]]:
 
     with _conn() as c:
         c.row_factory = sqlite3.Row
-        cur = c.execute(f"SELECT rowid AS _rowid_, * FROM {table} LIMIT ?", (cap,))
+        cur = c.execute(f"SELECT rowid AS _rowid_, * FROM {table}")
         rows = cur.fetchall()
 
     if not rows:
@@ -177,6 +226,8 @@ def iter_points(limit: int = 5000) -> Iterable[dict[str, Any]]:
 
     out: list[dict[str, Any]] = []
     for r in rows:
+        if not _row_passes_region_filter(r):
+            continue
         keys = list(r.keys())
         if coords_idx >= len(keys):
             continue
@@ -187,6 +238,8 @@ def iter_points(limit: int = 5000) -> Iterable[dict[str, Any]]:
         lat, lon = parsed
         props = {k: r[k] for k in keys if k not in {"_rowid_"}}
         out.append({"id": int(r["_rowid_"]), "lat": lat, "lon": lon, "props": props})
+        if len(out) >= cap:
+            break
     return out
 
 
