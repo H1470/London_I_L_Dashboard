@@ -6,7 +6,7 @@ python-dotenv>=1.0.0
 
 # Future: Excel ingestion
 # pandas>=2.2.0
-# openpyxl>=3.1.0
+openpyxl>=3.1.0
 
 # Market data
 yfinance>=0.2.40

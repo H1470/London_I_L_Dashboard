@@ -243,7 +243,7 @@
             </div>
 
             <p class="muted" style="margin-top: 16px">Trial map embed (same component as Bought &amp; Sold for now).</p>
-            <iframe class="embed-frame" style="margin-top: 8px" title="Development map" src="/map-embed.html"></iframe>
+            <iframe class="embed-frame" style="margin-top: 8px" title="Development map" src="/map-dev-embed.html"></iframe>
           </section>
 
           <section class="page" id="news">
@@ -273,6 +273,39 @@
                 <li>Uploaded Newmark datasets</li>
               </ul>
             </div>
+
+            <div class="card" style="margin-top: 20px">
+              <h2>Newmark table preview (<code>master_all</code>)</h2>
+              <p class="muted">Top 20 rows from <code>/api/newmark/preview</code> for quick column verification.</p>
+              <div class="button-row" style="margin-top: 10px">
+                <button
+                  type="button"
+                  class="button secondary"
+                  onclick="(() => { const s=document.getElementById('newmark-preview-status'); if (!window.refreshNewmarkPreview) { if (s) s.textContent='Preview script not loaded (window.refreshNewmarkPreview is undefined).'; return; } window.refreshNewmarkPreview(); })()"
+                >
+                  Reload preview
+                </button>
+              </div>
+              <p id="newmark-preview-status" class="muted" style="margin-top: 10px"></p>
+              <div
+                style="
+                  overflow: auto;
+                  max-height: 520px;
+                  min-height: 140px;
+                  border: 1px solid rgba(255, 255, 255, 0.06);
+                  border-radius: 12px;
+                "
+              >
+                <table id="newmark-preview-table" style="margin: 0">
+                  <thead id="newmark-preview-head"></thead>
+                  <tbody id="newmark-preview-body">
+                    <tr>
+                      <td class="muted">Click “Reload preview” to load rows.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </section>
 
           <section class="page" id="uploads">
@@ -287,6 +320,7 @@
       </main>
     </div>
 
+    <script type="module" src="/js/newmark-preview-bootstrap.js"></script>
     <script type="module" src="/js/app.js"></script>
   </body>
 </html>

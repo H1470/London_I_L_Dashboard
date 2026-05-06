@@ -21,3 +21,26 @@ body {
   height: 100%;
   min-height: 400px;
 }
+
+/* Newmark map hover tooltips (map.js) */
+.leaflet-tooltip.newmark-map-tip {
+  max-width: 320px;
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.35;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+}
+
+.newmark-map-tip .newmark-tip-row + .newmark-tip-row {
+  margin-top: 4px;
+}
+
+.newmark-map-tip .newmark-tip-label {
+  font-weight: 600;
+  margin-right: 4px;
+}
+
+.newmark-map-tip .muted {
+  opacity: 0.75;
+}

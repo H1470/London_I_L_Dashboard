@@ -1,5 +1,6 @@
 import { loadDashboardData, loadTrialSummary } from "./dashboard.js";
 import { initDealsTrackerTabs } from "./deals-tabs.js";
+import { refreshNewmarkPreview } from "./newmark-preview.js";
 import { refreshNewsPage } from "./news-page.js";
 
 const pageMeta = {
@@ -59,13 +60,22 @@ export function showPage(id) {
     refreshNewsPage();
   }
 
+  if (id === "sources") {
+    refreshNewmarkPreview();
+  }
+
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 window.showPage = showPage;
+window.refreshNewmarkPreview = refreshNewmarkPreview;
 
 document.querySelectorAll(".nav button").forEach((button) => {
   button.addEventListener("click", () => showPage(button.dataset.page));
 });
 
 initDealsTrackerTabs();
+
+// If someone loads directly onto a page via saved state, ensure page hooks run.
+const initialActive = document.querySelector(".page.active")?.id;
+if (initialActive) showPage(initialActive);
