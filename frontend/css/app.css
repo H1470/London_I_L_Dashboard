@@ -424,6 +424,35 @@ a.button {
   display: block;
 }
 
+/* EY Calculator — SharePoint embed shell (iframe size from HTML / inline style, not global PBI rules) */
+#ey-calculator.page.active {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+#ey-calculator.page.active .ey-calculator-stack {
+  display: flex;
+  flex-direction: column;
+  margin-left: -30px;
+  margin-right: -30px;
+  width: calc(100% + 60px);
+  flex: 0 0 auto;
+  flex-shrink: 0;
+}
+
+/* EY embed: dimensions come from the iframe’s own attributes / inline style (not .pbi-embed-wrap iframe %) */
+#ey-calculator.page.active .ey-calculator-embed-host {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--white);
+  overflow: visible;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -547,6 +576,12 @@ tr:last-child td {
   }
 
   #deals-tracker.page.active .deals-pbi-stack {
+    margin-left: -18px;
+    margin-right: -18px;
+    width: calc(100% + 36px);
+  }
+
+  #ey-calculator.page.active .ey-calculator-stack {
     margin-left: -18px;
     margin-right: -18px;
     width: calc(100% + 36px);

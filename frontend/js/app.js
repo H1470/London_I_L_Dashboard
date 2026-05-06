@@ -28,9 +28,9 @@ const pageMeta = {
     title: "Latest London I&L News",
     subtitle: "Market alerts",
   },
-  sources: {
-    title: "Newmark Research",
-    subtitle: "Platform inputs",
+  "ey-calculator": {
+    title: "EY Calculator",
+    subtitle: "EY tools",
   },
   uploads: {
     title: "Uploads",
