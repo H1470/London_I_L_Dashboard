@@ -79,7 +79,7 @@ Runtime data (often **gitignored**): SQLite files under `backend/data/` (e.g. `n
 
 | File | Purpose |
 |------|---------|
-| `index.html` | **SPA-style shell**: sidebar nav, sections per “page” (landing, dashboard, bought-sold, deals-tracker, …), EY Calculator iframe, script tags for ES modules. |
+| `index.html` | **SPA-style shell**: sidebar nav, sections per “page” (dashboard default, bought-sold, deals-tracker, …), EY Calculator iframe, script tags for ES modules. |
 | `css/app.css` | Global layout (sidebar + main), cards, tables, **Deals Power BI** stack, **Newmark** / EY embed tweaks, news list, responsive rules. |
 | `css/embed.css` | Styles for **standalone** map HTML pages (minimal). |
 

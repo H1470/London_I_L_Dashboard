@@ -12,7 +12,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from app.api.routes import health, indices, newmark, news_feed, summary
+from app.api.routes import health, indices, newmark, news_feed, planning, summary
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent.parent / "frontend"
 
@@ -31,6 +31,7 @@ app.include_router(summary.router, prefix="/api", tags=["summary"])
 app.include_router(indices.router, prefix="/api", tags=["indices"])
 app.include_router(news_feed.router, prefix="/api", tags=["news"])
 app.include_router(newmark.router, prefix="/api", tags=["newmark"])
+app.include_router(planning.router, prefix="/api", tags=["planning"])
 
 if FRONTEND_DIR.is_dir():
     app.mount("/", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")

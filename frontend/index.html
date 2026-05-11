@@ -10,17 +10,21 @@
     <div class="app">
       <aside class="sidebar">
         <div class="brand">
-          <div class="brand-mark">NEWMARK</div>
+          <div class="brand-mark" aria-label="Newmark Analytics">
+            <span class="brand-name">Newmark </span>
+            <span class="brand-sep" aria-hidden="true">| </span>
+            <span class="brand-analytics">Analytics</span>
+          </div>
           <div class="brand-sub">London Industrial & Logistics</div>
         </div>
 
         <div class="nav-label">Platform</div>
         <nav class="nav" aria-label="Platform navigation">
-          <button type="button" class="active" data-page="landing">Landing</button>
-          <button type="button" data-page="dashboard">Dashboard</button>
+          <button type="button" class="active" data-page="dashboard">Dashboard</button>
           <button type="button" data-page="bought-sold">Newmark Bought & Sold List</button>
           <button type="button" data-page="deals-tracker">London I&L Deals Tracker</button>
           <button type="button" data-page="development">London I&L Development</button>
+          <button type="button" data-page="planning">Planning</button>
           <button type="button" data-page="news">News</button>
           <button type="button" data-page="ey-calculator">EY Calculator</button>
           <button type="button" data-page="uploads">Uploads</button>
@@ -35,70 +39,13 @@
         <header>
           <div>
             <strong id="page-title">London I&L Information Platform</strong>
-            <span id="page-subtitle">Landing page</span>
+            <span id="page-subtitle">Dashboard</span>
           </div>
           <span>Internal working version</span>
         </header>
 
         <div class="content">
-          <section class="page active" id="landing">
-            <div class="hero">
-              <div>
-                <div class="kicker">Newmark London I&L</div>
-                <h1>London I&L Information Platform</h1>
-                <p>
-                  A central intelligence platform for London industrial and logistics market news, macro outlook,
-                  transaction intelligence, development pipeline tracking and live client-facing insight.
-                </p>
-
-                <div class="button-row">
-                  <button type="button" class="button" onclick="showPage('dashboard')">Open Dashboard</button>
-                  <button type="button" class="button secondary" onclick="showPage('development')">View Development</button>
-                </div>
-              </div>
-
-              <div class="hero-strip">
-                <div class="hero-stat">
-                  <strong>London</strong>
-                  <span>Core market focus</span>
-                </div>
-                <div class="hero-stat">
-                  <strong>I&L</strong>
-                  <span>Industrial & Logistics</span>
-                </div>
-                <div class="hero-stat">
-                  <strong>Daily</strong>
-                  <span>News and market updates</span>
-                </div>
-                <div class="hero-stat">
-                  <strong>Live</strong>
-                  <span>Expandable platform structure</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="grid cols-3" style="margin-top: 20px">
-              <div class="card">
-                <span class="pill">Macro</span>
-                <h3>Macro outlook</h3>
-                <p class="muted">Add rates, inflation, gilts, FX and capital markets commentary here.</p>
-              </div>
-
-              <div class="card">
-                <span class="pill">News</span>
-                <h3>Market news</h3>
-                <p class="muted">Add relevant London logistics, client and capital markets news here.</p>
-              </div>
-
-              <div class="card">
-                <span class="pill">Pipeline</span>
-                <h3>Development tracker</h3>
-                <p class="muted">Add planning, B2/B8/E(g)(iii) and development pipeline intelligence here.</p>
-              </div>
-            </div>
-          </section>
-
-          <section class="page" id="dashboard">
+          <section class="page active" id="dashboard">
             <div class="kicker">Dashboard</div>
             <h1>London I&L Information Platform</h1>
 
@@ -272,6 +219,30 @@
 
             <p class="muted" style="margin-top: 16px">Trial map embed (same component as Bought &amp; Sold for now).</p>
             <iframe class="embed-frame" style="margin-top: 8px" title="Development map" src="/map-dev-embed.html"></iframe>
+          </section>
+
+          <section class="page" id="planning">
+            <div class="kicker">Planning London Datahub</div>
+            <h1>Planning applications</h1>
+
+            <div class="card">
+              <p id="planning-load-status" class="muted" style="margin-bottom: 12px">
+                Open this tab to load data from <code>/api/planning/results</code> (same host as this page).
+              </p>
+
+              <div class="planning-table-scroll">
+                <table class="planning-simple-table" id="planning-data-table">
+                  <thead>
+                    <tr id="planning-thead-row"></tr>
+                  </thead>
+                  <tbody id="planning-tbody">
+                    <tr>
+                      <td class="muted">Not loaded — choose Planning in the sidebar.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </section>
 
           <section class="page" id="news">

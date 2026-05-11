@@ -6,12 +6,9 @@ import { loadDashboardData, loadTrialSummary } from "./dashboard.js";
 import { initDealsTrackerTabs } from "./deals-tabs.js";
 import { refreshNewmarkPreview } from "./newmark-preview.js";
 import { refreshNewsPage } from "./news-page.js";
+import { initPlanningSectionLoader } from "./planning-page.js";
 
 const pageMeta = {
-  landing: {
-    title: "London I&L Information Platform",
-    subtitle: "Landing page",
-  },
   dashboard: {
     title: "London I&L Information Platform",
     subtitle: "Dashboard",
@@ -27,6 +24,10 @@ const pageMeta = {
   development: {
     title: "London I&L Development",
     subtitle: "Planning and pipeline intelligence",
+  },
+  planning: {
+    title: "Planning applications",
+    subtitle: "Planning London Datahub",
   },
   news: {
     title: "Latest London I&L News",
@@ -51,7 +52,7 @@ export function showPage(id) {
     button.classList.toggle("active", button.dataset.page === id);
   });
 
-  const meta = pageMeta[id] || pageMeta.landing;
+  const meta = pageMeta[id] || pageMeta.dashboard;
   document.getElementById("page-title").textContent = meta.title;
   document.getElementById("page-subtitle").textContent = meta.subtitle;
 
@@ -84,3 +85,6 @@ initDealsTrackerTabs();
 // If someone loads directly onto a page via saved state, ensure page hooks run.
 const initialActive = document.querySelector(".page.active")?.id;
 if (initialActive) showPage(initialActive);
+
+/** Planning tab loads when ``#planning`` gains ``.active`` (sidebar navigation + initial state). */
+initPlanningSectionLoader();

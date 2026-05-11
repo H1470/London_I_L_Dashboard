@@ -12,5 +12,6 @@ __pycache__/
 backend/data/raw/
 backend/data/cache/
 backend/data/*.db
+backend/data/planning_applications.csv
 *.xlsx
 *.xls
