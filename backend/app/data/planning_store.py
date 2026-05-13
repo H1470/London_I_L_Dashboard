@@ -168,6 +168,17 @@ def _use_class_from_source(src: dict[str, Any]) -> str:
     return ""
 
 
+def _polygon_from_source(src: dict[str, Any]) -> str:
+    """Site / application polygon from ``_source`` (top-level or under ``application_details``), as JSON text for the table."""
+    p = src.get("polygon")
+    if p is not None:
+        return _scalar_cell(p)
+    ad = src.get("application_details")
+    if isinstance(ad, dict) and ad.get("polygon") is not None:
+        return _scalar_cell(ad.get("polygon"))
+    return ""
+
+
 _USE_CLASS_COL_AD = "application_details.existing_proposed_floorspace_details.use_class"
 _USE_CLASS_COL_TOP = "existing_proposed_floorspace_details.use_class"
 _GIA_COL_AD = "application_details.existing_proposed_floorspace_details.gia_existing"
@@ -298,6 +309,7 @@ _COLUMN_PRIORITY: tuple[str, ...] = (
     "proposal",
     "application_location",
     "site_address",
+    "polygon",
     "lpa_name",
     "lpa_app_no",
     "application_type",
@@ -412,6 +424,9 @@ def fetch_table_payload() -> dict[str, Any]:
         if not isinstance(src, dict):
             src = {}
         flat = _flatten_source(src)
+        # Omit raw nested object from the table (debug-only noise); floorspace is still in denormalised columns below.
+        flat.pop("application_details", None)
+        flat["polygon"] = _polygon_from_source(src)
         aid = str(r.get("application_id") or "").strip()
         if "id" not in flat and aid:
             flat["id"] = aid

@@ -36,6 +36,7 @@ _PLANNING_SOURCE_FIELDS: tuple[str, ...] = (
     "proposal",
     "application_location",
     "site_address",
+    "polygon",
     "lpa_name",
     "lpa_app_no",
     "application_type",
