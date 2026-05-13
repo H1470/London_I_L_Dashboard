@@ -73,7 +73,8 @@ def _migrate_sqlite_to_csv_if_needed(csv_path: Path) -> None:
 
 
 def replace_all_from_hits(hits: list[dict[str, Any]]) -> int:
-    """Replace CSV contents with ES ``hits.hits`` list; returns number of rows stored."""
+    """Replace CSV contents with ES ``hits.hits`` list (after store use_class allowlist); returns number of rows stored."""
+    hits = filter_hits_store_use_class_allowlist(hits)
     now = datetime.now(timezone.utc).isoformat()
     rows: list[dict[str, str]] = []
     for hit in hits:
@@ -100,6 +101,14 @@ def replace_all_from_hits(hits: list[dict[str, Any]]) -> int:
     return len(df)
 
 
+def _scalar_cell(v: Any) -> str:
+    if v is None:
+        return ""
+    if isinstance(v, (dict, list)):
+        return json.dumps(v, ensure_ascii=False)
+    return str(v)
+
+
 def _flatten_source(obj: dict[str, Any]) -> dict[str, Any]:
     out: dict[str, Any] = {}
     for k, v in obj.items():
@@ -109,6 +118,174 @@ def _flatten_source(obj: dict[str, Any]) -> dict[str, Any]:
             out[k] = ""
         else:
             out[k] = v
+    return out
+
+
+def _existing_proposed_floorspace_details_from_source(src: dict[str, Any]) -> Any:
+    """Floorspace object/array from ``_source`` — top-level or under ``application_details``."""
+    ep = src.get("existing_proposed_floorspace_details")
+    if ep is not None:
+        return ep
+    ad = src.get("application_details")
+    if isinstance(ad, dict):
+        return ad.get("existing_proposed_floorspace_details")
+    return None
+
+
+def _gia_existing_from_source(src: dict[str, Any]) -> str:
+    """``gia_existing`` from floorspace slice or ``application_details.total_gia_existing`` fallback."""
+    ep = _existing_proposed_floorspace_details_from_source(src)
+    cell = ""
+    if isinstance(ep, dict):
+        cell = _scalar_cell(ep.get("gia_existing"))
+    elif isinstance(ep, list):
+        parts: list[str] = []
+        for item in ep:
+            if isinstance(item, dict) and "gia_existing" in item:
+                parts.append(_scalar_cell(item.get("gia_existing")))
+        cell = "; ".join(x for x in parts if x)
+    if cell:
+        return cell
+    ad = src.get("application_details")
+    if isinstance(ad, dict) and ad.get("total_gia_existing") is not None:
+        return _scalar_cell(ad.get("total_gia_existing"))
+    return ""
+
+
+def _use_class_from_source(src: dict[str, Any]) -> str:
+    """``use_class`` from floorspace in ``_source`` (top-level or under ``application_details``)."""
+    ep = _existing_proposed_floorspace_details_from_source(src)
+    if ep is None:
+        return ""
+    if isinstance(ep, dict):
+        return _scalar_cell(ep.get("use_class"))
+    if isinstance(ep, list):
+        parts: list[str] = []
+        for item in ep:
+            if isinstance(item, dict) and "use_class" in item:
+                parts.append(_scalar_cell(item.get("use_class")))
+        return "; ".join(x for x in parts if x)
+    return ""
+
+
+_USE_CLASS_COL_AD = "application_details.existing_proposed_floorspace_details.use_class"
+_USE_CLASS_COL_TOP = "existing_proposed_floorspace_details.use_class"
+_GIA_COL_AD = "application_details.existing_proposed_floorspace_details.gia_existing"
+_GIA_COL_TOP = "existing_proposed_floorspace_details.gia_existing"
+
+# After ES fetch: only persist / show rows whose floorspace ``use_class`` cell contains at least one of these (``;``-separated segments, exact match).
+PLANNING_STORE_USE_CLASS_ALLOWLIST: tuple[str, ...] = ("B8", "B2", "E(g)(iii)")
+
+
+def _use_class_allowlist_tokens() -> frozenset[str]:
+    return frozenset(PLANNING_STORE_USE_CLASS_ALLOWLIST)
+
+
+def use_class_cell_matches_store_allowlist(cell: str) -> bool:
+    """True if any ``;``-split segment of ``cell`` equals one of ``PLANNING_STORE_USE_CLASS_ALLOWLIST`` (trimmed, exact)."""
+    if not (cell or "").strip():
+        return False
+    allowed = _use_class_allowlist_tokens()
+    for part in cell.split(";"):
+        if part.strip() in allowed:
+            return True
+    return False
+
+
+def hit_matches_store_use_class_allowlist(hit: dict[str, Any]) -> bool:
+    """True if the hit's ``_source`` floorspace ``use_class`` matches the store allowlist (see ``use_class_cell_matches_store_allowlist``)."""
+    if not isinstance(hit, dict):
+        return False
+    src = hit.get("_source")
+    if not isinstance(src, dict):
+        src = {}
+    return use_class_cell_matches_store_allowlist(_use_class_from_source(src))
+
+
+def filter_hits_store_use_class_allowlist(hits: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Subset of ``hits`` that pass ``hit_matches_store_use_class_allowlist`` (for CSV replace)."""
+    return [h for h in hits if isinstance(h, dict) and hit_matches_store_use_class_allowlist(h)]
+
+
+def _use_class_cell(row: dict[str, Any]) -> str:
+    return str(row.get(_USE_CLASS_COL_AD) or row.get(_USE_CLASS_COL_TOP) or "")
+
+
+def _gia_numeric_max_from_display_cell(cell: str) -> float | None:
+    """Best-effort max numeric from ``gia_existing`` display cell (``;``-joined segments)."""
+    if not (cell or "").strip():
+        return None
+    nums: list[float] = []
+    for part in cell.split(";"):
+        t = part.strip()
+        if not t:
+            continue
+        try:
+            nums.append(float(t))
+        except ValueError:
+            continue
+    return max(nums) if nums else None
+
+
+def apply_planning_row_filters(
+    payload: dict[str, Any],
+    *,
+    use_class_contains: str | None = None,
+    status_contains: str | None = None,
+    gia_existing_min: float | None = None,
+) -> dict[str, Any]:
+    """
+    Return a shallow copy of a ``fetch_table_payload`` / API merge dict with ``rows`` filtered in memory.
+
+    Use when Elasticsearch nested/object floorspace queries are awkward but the table already has
+    denormalised ``use_class`` / ``gia_existing`` columns. CSV on disk is unchanged.
+    """
+    out = dict(payload)
+    rows = out.get("rows")
+    if not isinstance(rows, list):
+        out["client_filters_applied"] = False
+        return out
+
+    has_uc = bool((use_class_contains or "").strip())
+    has_st = bool((status_contains or "").strip())
+    has_gia = gia_existing_min is not None
+    if not has_uc and not has_st and not has_gia:
+        out["client_filters_applied"] = False
+        return out
+
+    uc_needle = (use_class_contains or "").strip().lower()
+    st_needle = (status_contains or "").strip().lower()
+    gia_min = float(gia_existing_min) if has_gia else None
+
+    def keep(row: dict[str, Any]) -> bool:
+        if not isinstance(row, dict):
+            return False
+        if has_uc and uc_needle not in _use_class_cell(row).lower():
+            return False
+        if has_st and st_needle not in str(row.get("status") or "").lower():
+            return False
+        if has_gia and gia_min is not None:
+            cell = str(row.get(_GIA_COL_AD) or row.get(_GIA_COL_TOP) or "")
+            mx = _gia_numeric_max_from_display_cell(cell)
+            if mx is None or mx <= gia_min:
+                return False
+        return True
+
+    pre_n = len(rows)
+    filtered = [r for r in rows if keep(r)]
+    out["rows"] = filtered
+    out["row_count"] = len(filtered)
+    out["client_filters_applied"] = True
+    out["pre_client_filter_row_count"] = pre_n
+    out["client_filters"] = {
+        k: v
+        for k, v in (
+            ("use_class_contains", (use_class_contains or "").strip() if has_uc else None),
+            ("status_contains", (status_contains or "").strip() if has_st else None),
+            ("gia_existing_min", gia_existing_min if has_gia else None),
+        )
+        if v is not None
+    }
     return out
 
 
@@ -125,9 +302,14 @@ _COLUMN_PRIORITY: tuple[str, ...] = (
     "lpa_app_no",
     "application_type",
     "appeal_start_date",
+    "status",
     "valid_date",
     "decision_date",
     "last_updated",
+    "application_details.existing_proposed_floorspace_details.use_class",
+    "existing_proposed_floorspace_details.use_class",
+    "application_details.existing_proposed_floorspace_details.gia_existing",
+    "existing_proposed_floorspace_details.gia_existing",
     "existing_proposed_floorspace_details",
 )
 
@@ -171,7 +353,12 @@ def store_debug_snapshot() -> dict[str, Any]:
 
 
 def fetch_table_payload() -> dict[str, Any]:
-    """Rows and column order for a simple HTML table, plus file-store diagnostics for the UI."""
+    """Rows and column order for a simple HTML table, plus file-store diagnostics for the UI.
+
+    Parsed rows are restricted to ``PLANNING_STORE_USE_CLASS_ALLOWLIST`` on the denormalised
+    ``existing_proposed_floorspace_details.use_class`` cell (same value as the AD-prefixed column).
+    The CSV file still holds whatever was last written by ``replace_all_from_hits`` (already filtered on sync).
+    """
     _migrate_sqlite_to_csv_if_needed(_csv_path())
     path = _csv_path().resolve()
 
@@ -186,6 +373,8 @@ def fetch_table_payload() -> dict[str, Any]:
             "db_path": str(path),
             "store_path": str(path),
             "store_kind": "pandas_csv",
+            "store_use_class_allowlist": list(PLANNING_STORE_USE_CLASS_ALLOWLIST),
+            "pre_use_class_allowlist_row_count": 0,
         }
 
     try:
@@ -202,6 +391,8 @@ def fetch_table_payload() -> dict[str, Any]:
             "store_path": str(path),
             "store_kind": "pandas_csv",
             "store_error": "Could not read CSV (file corrupt or not valid CSV).",
+            "store_use_class_allowlist": list(PLANNING_STORE_USE_CLASS_ALLOWLIST),
+            "pre_use_class_allowlist_row_count": 0,
         }
     for col in _CSV_COLUMNS:
         if col not in df.columns:
@@ -224,8 +415,22 @@ def fetch_table_payload() -> dict[str, Any]:
         aid = str(r.get("application_id") or "").strip()
         if "id" not in flat and aid:
             flat["id"] = aid
+        gia = _gia_existing_from_source(src)
+        flat["application_details.existing_proposed_floorspace_details.gia_existing"] = gia
+        flat["existing_proposed_floorspace_details.gia_existing"] = gia
+        use_class = _use_class_from_source(src)
+        flat["application_details.existing_proposed_floorspace_details.use_class"] = use_class
+        flat["existing_proposed_floorspace_details.use_class"] = use_class
+        flat["status"] = _scalar_cell(src.get("status"))
         parsed.append(flat)
         key_set.update(flat.keys())
+
+    pre_allowlist_n = len(parsed)
+    parsed = [
+        r
+        for r in parsed
+        if isinstance(r, dict) and use_class_cell_matches_store_allowlist(_use_class_cell(r))
+    ]
 
     ordered: list[str] = [c for c in _COLUMN_PRIORITY if c in key_set]
     ordered.extend(sorted(k for k in key_set if k not in _COLUMN_PRIORITY))
@@ -240,5 +445,7 @@ def fetch_table_payload() -> dict[str, Any]:
         "db_path": str(path),
         "store_path": str(path),
         "store_kind": "pandas_csv",
+        "store_use_class_allowlist": list(PLANNING_STORE_USE_CLASS_ALLOWLIST),
+        "pre_use_class_allowlist_row_count": pre_allowlist_n,
     }
     return out

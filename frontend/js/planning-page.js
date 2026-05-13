@@ -141,7 +141,42 @@ export async function refreshPlanningPage() {
 
     const bits = [`${rows.length} row(s) in table.`];
     if (data.query_mode) bits.push(`Mode: ${data.query_mode}.`);
+    if (data.live_fetch && data.decision_date_gt != null) {
+      const statuses =
+        Array.isArray(data.status_filter_labels) && data.status_filter_labels.length
+          ? `any of: ${data.status_filter_labels.join(", ")}`
+          : "configured statuses";
+      bits.push(`Filters: status ${statuses}; decision_date > ${data.decision_date_gt}.`);
+    }
+    if (data.live_fetch && data.es_gia_existing_gt != null) {
+      bits.push(
+        `ES query: application_details GIA > ${data.es_gia_existing_gt} (floorspace gia_existing OR total_gia_existing).`
+      );
+    }
+    if (
+      data.es_hits_in_response != null &&
+      data.upstream_stored_hits != null &&
+      data.es_hits_in_response !== data.upstream_stored_hits
+    ) {
+      bits.push(
+        `Store allowlist: ${data.upstream_stored_hits} of ${data.es_hits_in_response} hit(s) kept (use_class B8, B2, E(g)(iii)).`
+      );
+    }
     if (data.elasticsearch_total != null) bits.push(`ES total: ${data.elasticsearch_total}.`);
+    if (
+      data.pre_use_class_allowlist_row_count > 0 &&
+      Array.isArray(data.store_use_class_allowlist)
+    ) {
+      bits.push(
+        `Table use_class allowlist: ${rows.length} of ${data.pre_use_class_allowlist_row_count} parsed row(s) (${data.store_use_class_allowlist.join(", ")}).`
+      );
+    }
+    if (data.client_filters_applied && data.pre_client_filter_row_count != null) {
+      bits.push(
+        `Filtered: ${data.row_count ?? 0} of ${data.pre_client_filter_row_count} row(s)${data.client_filters ? ` (${JSON.stringify(data.client_filters)})` : ""}.`
+      );
+    }
+    if (data.planning_search_size != null) bits.push(`ES request size: ${data.planning_search_size}.`);
     if (data.upstream_stored_hits != null) bits.push(`Upstream hits stored: ${data.upstream_stored_hits}.`);
     if (data.stored_row_count != null) bits.push(`CSV rows: ${data.stored_row_count}.`);
     if (data.store_path || data.db_path) bits.push(`Store: ${data.store_path || data.db_path}.`);

@@ -20,6 +20,10 @@ log = logging.getLogger(__name__)
 _DEFAULT_BASE = "https://planningdata.london.gov.uk/api-guest"
 _DEFAULT_HEADER_NAME = "X-API-AllowRequest"
 _SEARCH_PATH = "applications/_search"
+# Elasticsearch ``size`` for ``applications/_search``.
+# Planning Datahub rejects ``from`` + ``size`` > ``index.max_result_window`` (10000 on this index).
+_SEARCH_SIZE_DEFAULT = 10000
+_SEARCH_SIZE_MAX = 10000
 
 # Returned fields: UPRN + descriptions first; include floorspace slice and appeal context.
 # (Adjust names against planninglondondatahub_public_technical_schemav2.1.xlsx if the API omits any.)
@@ -36,9 +40,11 @@ _PLANNING_SOURCE_FIELDS: tuple[str, ...] = (
     "lpa_app_no",
     "application_type",
     "appeal_start_date",
+    "status",
     "valid_date",
     "decision_date",
     "last_updated",
+    "application_details",
     "existing_proposed_floorspace_details",
 )
 
@@ -71,12 +77,12 @@ def _header_pair() -> tuple[str, str]:
 
 
 def _search_size() -> int:
-    raw = (os.getenv("PLANNING_LDH_SEARCH_SIZE") or "50").strip()
+    raw = (os.getenv("PLANNING_LDH_SEARCH_SIZE") or str(_SEARCH_SIZE_DEFAULT)).strip()
     try:
         n = int(raw)
     except ValueError:
-        n = 50
-    return max(1, min(n, 500))
+        n = _SEARCH_SIZE_DEFAULT
+    return max(1, min(n, _SEARCH_SIZE_MAX))
 
 
 def _appeal_start_gt() -> str:
@@ -94,101 +100,152 @@ def _appeal_start_gt() -> str:
     return "01/01/2025"
 
 
-def _gia_existing_min_gt() -> float:
-    raw = (os.getenv("PLANNING_GIA_EXISTING_MIN") or "20000").strip()
+# ``decision_date`` range lower bound (exclusive ``gt``). LDH expects **dd/MM/yyyy** as written here — not ISO.
+_DECISION_DATE_GT = "01/01/2025"
+
+
+def _decision_date_filter() -> dict[str, Any]:
+    """``decision_date`` > ``_DECISION_DATE_GT`` (AND with other ``bool`` ``filter`` clauses)."""
+    return {"range": {"decision_date": {"gt": _DECISION_DATE_GT}}}
+
+
+def _es_gia_existing_floorspace_gt_threshold() -> float:
+    """
+    Exclusive ``gt`` for GIA in Elasticsearch (see ``_application_details_gia_existing_filter``).
+
+    Env ``PLANNING_ES_GIA_EXISTING_GT`` (default ``10000``). Set e.g. ``20000`` when you want a stricter pull.
+    """
+    raw = (os.getenv("PLANNING_ES_GIA_EXISTING_GT") or "10000").strip()
     try:
         return float(raw)
     except ValueError:
-        return 20000.0
+        return 10000.0
 
 
-def _floorspace_nested_path() -> str:
-    return (os.getenv("PLANNING_LDH_FLOORS_PATH") or "existing_proposed_floorspace_details").strip()
+def planning_es_gia_existing_gt() -> float:
+    """Lower bound (exclusive ``gt``) for the ES floorspace ``gia_existing`` range filter."""
+    _load_env()
+    return _es_gia_existing_floorspace_gt_threshold()
 
 
-def _use_nested_floors() -> bool:
+def _application_details_gia_existing_filter() -> dict[str, Any]:
     """
-    Use Elasticsearch ``nested`` query only if the index maps ``existing_proposed_floorspace_details``
-    as ``nested``. Planning London Datahub's ``applications`` index uses ``object`` (not nested),
-    so the default is **off**. Set ``PLANNING_LDH_FLOORS_NESTED=1`` only for indices that declare a
-    nested mapping for this path.
-    """
-    raw = (os.getenv("PLANNING_LDH_FLOORS_NESTED") or "0").strip().lower()
-    return raw in ("1", "true", "yes")
+    GIA **>** threshold on ``application_details`` using the two places LDH stores it (no DSL “tree building”):
 
+    - ``application_details.existing_proposed_floorspace_details.gia_existing`` (array row), or
+    - ``application_details.total_gia_existing`` (rollup on the same object).
 
-def _floorspace_filter() -> dict[str, Any]:
+    Either match is enough (``bool`` ``should``, ``minimum_should_match`` 1).
     """
-    Floorspace slice: ``use_class`` contains B8 or B2 (wildcard), AND ``gia_existing`` > threshold.
-
-    By default this is a plain ``bool`` filter on dotted field paths (object/array-of-objects mapping).
-    With ``PLANNING_LDH_FLOORS_NESTED=1``, wraps in ``nested`` — required only if the index mapping
-    defines ``existing_proposed_floorspace_details`` as ``nested`` (otherwise ES returns 400:
-    ``failed to find nested object under path``).
-    """
-    path = _floorspace_nested_path()
-    p = f"{path}."
-    gia_min = _gia_existing_min_gt()
-    # Text vs keyword subfields: try both so wildcard is not silently empty.
-    use_should: list[dict[str, Any]] = []
-    for code in ("B8", "B2"):
-        for suf in ("", ".keyword"):
-            field = f"{p}use_class{suf}"
-            use_should.append({"wildcard": {field: f"*{code}*"}})
-    inner: dict[str, Any] = {
+    gt = _es_gia_existing_floorspace_gt_threshold()
+    return {
         "bool": {
-            "must": [
-                {"range": {f"{p}gia_existing": {"gt": gia_min}}},
+            "should": [
                 {
-                    "bool": {
-                        "should": use_should,
-                        "minimum_should_match": 1,
-                    },
+                    "range": {
+                        "application_details.existing_proposed_floorspace_details.gia_existing": {
+                            "gt": gt,
+                        }
+                    }
                 },
-            ]
+                {"range": {"application_details.total_gia_existing": {"gt": gt}}},
+            ],
+            "minimum_should_match": 1,
         }
     }
-    if _use_nested_floors():
-        return {"nested": {"path": path, "query": inner}}
-    return inner
+
+
+# --- Status filter (OR across these LDH ``status`` values) ---
+_PLANNING_STATUS_OR_LABELS: tuple[str, ...] = (
+    "Allowed",
+    "Approved",
+    "Application Received",
+    "Completed",
+    "Commenced",
+)
+
+
+def planning_status_filter_labels() -> tuple[str, ...]:
+    """Human-readable status values included in the default query (OR — any one may match)."""
+    return _PLANNING_STATUS_OR_LABELS
+
+
+def _status_clause_for_phrase(phrase: str) -> dict[str, Any]:
+    """
+    One status value: ``term`` / ``wildcard`` on ``status.keyword`` plus ``match_phrase`` on ``status``.
+
+    Phrases with spaces (e.g. **Application Received**) rely on ``match_phrase``; exact keyword
+    terms still match when the index stores the same string.
+    """
+    lower = phrase.lower()
+    return {
+        "bool": {
+            "should": [
+                {"term": {"status.keyword": phrase}},
+                {"term": {"status.keyword": lower}},
+                {"wildcard": {"status.keyword": f"*{phrase}*"}},
+                {"wildcard": {"status.keyword": f"*{lower}*"}},
+                {"match_phrase": {"status": phrase}},
+            ],
+            "minimum_should_match": 1,
+        }
+    }
+
+
+def _status_filter() -> dict[str, Any]:
+    """``status`` is any one of ``_PLANNING_STATUS_OR_LABELS`` (OR)."""
+    return {
+        "bool": {
+            "should": [_status_clause_for_phrase(label) for label in _PLANNING_STATUS_OR_LABELS],
+            "minimum_should_match": 1,
+        }
+    }
+
+
+def planning_decision_date_gt() -> str:
+    """Lower bound (exclusive ``gt``) used in the default ``decision_date`` filter — for API diagnostics."""
+    _load_env()
+    return _DECISION_DATE_GT
+
+
+def planning_search_size() -> int:
+    """Elasticsearch ``size`` for ``applications/_search`` (env ``PLANNING_LDH_SEARCH_SIZE``)."""
+    _load_env()
+    return _search_size()
 
 
 def applications_search_body() -> dict[str, Any]:
     """
     Default ``applications/_search`` body for Planning London Datahub (Elasticsearch 7.9).
 
-    **Filters**
+    **Filters** (all AND)
 
-    - ``appeal_start_date`` **>** ``PLANNING_APPEAL_START_AFTER`` (default ``01/01/2025``, DD/MM/YYYY
-      as in the connection guide).
-    - Floorspace: ``use_class`` contains **B8** or **B2** (``wildcard``), and ``gia_existing`` **>**
-      ``PLANNING_GIA_EXISTING_MIN`` (default ``20000``). Default query shape matches LDH ``object``
-      mapping; optional ``nested`` wrapper via ``PLANNING_LDH_FLOORS_NESTED=1`` if your index uses it.
+    - ``status`` is one of **Allowed**, **Approved**, **Application Received**, **Completed**,
+      **Commenced** (OR — see ``_status_filter`` / ``planning_status_filter_labels``).
+    - ``decision_date`` **>** ``01/01/2025`` as **dd/MM/yyyy** (see ``_DECISION_DATE_GT`` / ``_decision_date_filter``).
+    - GIA **>** ``PLANNING_ES_GIA_EXISTING_GT`` (default ``10000``) on **either**
+      ``application_details.existing_proposed_floorspace_details.gia_existing`` **or**
+      ``application_details.total_gia_existing`` (see ``_application_details_gia_existing_filter``).
 
-    **Projection** — ``_source`` includes UPRN, description-style fields, LPA identifiers,
-    appeal and decision dates, and the floorspace array. Tweak ``_PLANNING_SOURCE_FIELDS`` if the
-    technical schema uses different property names.
+    Clauses are passed as Elasticsearch ``bool`` ``filter`` (required matches, no extra scoring) — that word is ES DSL,
+    not an additional in-app filter pass after the search.
 
-    **Query mode** — ``PLANNING_QUERY_MODE``:
+    **Projection** — ``_source`` includes UPRN, descriptions, LPA fields, appeal/decision dates,
+    ``status``, and floorspace. Adjust ``_PLANNING_SOURCE_FIELDS`` if the schema differs.
 
-    - ``full`` (default): appeal date + B2/B8 floorspace + GIA filters.
-    - ``match_all``: no filters (smoke test — verifies connectivity and table UI).
+    **Result window** — ``size`` defaults to ``_SEARCH_SIZE_DEFAULT`` (10000, LDH ``max_result_window``); env
+    ``PLANNING_LDH_SEARCH_SIZE`` overrides, capped at ``_SEARCH_SIZE_MAX`` (10000). For more hits use scroll / ``search_after`` (not implemented here).
     """
     _load_env()
-    mode = (os.getenv("PLANNING_QUERY_MODE") or "full").strip().lower()
-    if mode in ("match_all", "smoke", "test"):
-        return {
-            "query": {"match_all": {}},
-            "size": _search_size(),
-            "_source": list(_PLANNING_SOURCE_FIELDS),
-        }
+    filters: list[dict[str, Any]] = [
+        _status_filter(),
+        _decision_date_filter(),
+        _application_details_gia_existing_filter(),
+    ]
     return {
         "query": {
             "bool": {
-                "filter": [
-                    {"range": {"appeal_start_date": {"gt": _appeal_start_gt()}}},
-                    _floorspace_filter(),
-                ]
+                "filter": filters,
             }
         },
         "size": _search_size(),
